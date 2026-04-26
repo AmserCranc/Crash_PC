@@ -46,29 +46,29 @@ public class NSD
     
 
 
-    public NSD(string path)
+    public NSD(string streamPath)
     {
         byte[] raw;
-        using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+        using FileStream fs = new FileStream(streamPath, FileMode.Open, FileAccess.Read);
         {
             raw = new byte[fs.Length];
             fs.Read(raw, 0, raw.Length);
         }
 
         for(int offset = HASH_OFFSET_POS; offset < HASHTABLE_COUNT * PROPERTY_SIZE; offset += PROPERTY_SIZE)
-            hashtableOffsets[offset] = ConvertBits.FromInt32(ref raw, offset, MAX_NSD_SIZE);
+            hashtableOffsets[offset] = ConvertBits.FromInt32(ref raw, offset);
 
-        chunkCount = ConvertBits.FromInt32(ref raw, CHUNK_COUNT_POS, MAX_NSD_SIZE);
-        entryCount = ConvertBits.FromInt32(ref raw, ENTRY_COUNT_POS, MAX_NSD_SIZE);
-        objectEID  = ConvertBits.FromInt32(ref raw, OBJECT_TYPE_POS, MAX_NSD_SIZE);
-        UNK_1      = ConvertBits.FromInt32(ref raw, UNKNOWN_1,       MAX_NSD_SIZE);
-        UNK_2      = ConvertBits.FromInt32(ref raw, UNKNOWN_2,       MAX_NSD_SIZE);
-        UNK_3      = ConvertBits.FromInt32(ref raw, UNKNOWN_3,       MAX_NSD_SIZE);
+        chunkCount = ConvertBits.FromInt32(ref raw, CHUNK_COUNT_POS);
+        entryCount = ConvertBits.FromInt32(ref raw, ENTRY_COUNT_POS);
+        objectEID  = ConvertBits.FromInt32(ref raw, OBJECT_TYPE_POS);
+        UNK_1      = ConvertBits.FromInt32(ref raw, UNKNOWN_1);
+        UNK_2      = ConvertBits.FromInt32(ref raw, UNKNOWN_2);
+        UNK_3      = ConvertBits.FromInt32(ref raw, UNKNOWN_3);
 
         int idx = 0;
         for(int chunk = COMP_CHUNKS_POS; chunk < COMP_CHUNKS_POS + (COMP_CHNK_COUNT * PROPERTY_SIZE); chunk += PROPERTY_SIZE)
         {
-            compressedChunkOffsets[idx] = ConvertBits.FromInt32(ref raw, chunk, MAX_NSD_SIZE);
+            compressedChunkOffsets[idx] = ConvertBits.FromInt32(ref raw, chunk);
             idx++;
         }
             
@@ -76,23 +76,23 @@ public class NSD
         entryHashTable = new int[entryCount];
         for(int entry = ENTRY_HASH_TABL; entry < ENTRY_HASH_TABL + (entryCount * PROPERTY_SIZE * 2); entry += PROPERTY_SIZE * 2)
         {
-            entryHashTable[idx    ] = ConvertBits.FromInt32(ref raw, entry                , MAX_NSD_SIZE);
-            entryHashTable[idx + 1] = ConvertBits.FromInt32(ref raw, entry + PROPERTY_SIZE, MAX_NSD_SIZE);
+            entryHashTable[idx    ] = ConvertBits.FromInt32(ref raw, entry);
+            entryHashTable[idx + 1] = ConvertBits.FromInt32(ref raw, entry + PROPERTY_SIZE);
             idx++;
         }
 
         int idxAfterHashTable = ENTRY_HASH_TABL + (entryCount * PROPERTY_SIZE * 2);
-        levelHeaderMagic      = ConvertBits.FromInt32(ref raw, idxAfterHashTable + 0                , MAX_NSD_SIZE);
-        levelID               = ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE    , MAX_NSD_SIZE);
-        levelStartZoneEID     = ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 2, MAX_NSD_SIZE);
-        levelStartCamPath     = ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 3, MAX_NSD_SIZE);
-        UNK_4                 = ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 4, MAX_NSD_SIZE);
+        levelHeaderMagic      = ConvertBits.FromInt32(ref raw, idxAfterHashTable + 0);
+        levelID               = ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE);
+        levelStartZoneEID     = ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 2);
+        levelStartCamPath     = ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 3);
+        UNK_4                 = ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 4);
 
         idx = 0;
         int idxOfEIDmap = idxAfterHashTable + PROPERTY_SIZE * 5;
         for(int EID = idxOfEIDmap; EID < idxOfEIDmap + (PROPERTY_SIZE * E_EID_MAP_COUNT); EID += PROPERTY_SIZE)
         {
-            execEIDmap[idx] = ConvertBits.FromInt32(ref raw, EID, MAX_NSD_SIZE);
+            execEIDmap[idx] = ConvertBits.FromInt32(ref raw, EID);
             idx++;
         }
     }
