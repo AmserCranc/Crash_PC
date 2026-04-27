@@ -2,9 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class UnprocessedChunk : Chunk
+public class WavebankChunk : Chunk
 {
-    public UnprocessedChunk(byte[] _data) : base(_data)
+    public WavebankChunk(byte[] _data) : base(_data)
     {
         
     }

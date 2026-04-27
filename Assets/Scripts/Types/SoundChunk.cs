@@ -2,9 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class UnprocessedChunk : Chunk
+public class SoundChunk : Chunk
 {
-    public UnprocessedChunk(byte[] _data) : base(_data)
+    public SoundChunk(byte[] _data) : base(_data)
     {
         
     }

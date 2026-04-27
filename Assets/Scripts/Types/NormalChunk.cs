@@ -2,9 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class UnprocessedChunk : Chunk
+public class NormalChunk : Chunk
 {
-    public UnprocessedChunk(byte[] _data) : base(_data)
+    public NormalChunk(byte[] _data) : base(_data)
     {
         
     }
