@@ -30,25 +30,25 @@ public class NSD
     public int[] execEIDmap             = new int[E_EID_MAP_COUNT];
     public int[] entryHashTable; 
 
-    public int 
-        chunkCount, 
-        entryCount,  
-        objectEID,
-        UNK_1,
-        UNK_2,
-        UNK_3,
-        compressedChunkCount,
-        levelHeaderMagic,
-        levelID,
-        levelStartZoneEID,
-        levelStartCamPath,
-        UNK_4;
+    private byte[] raw;
+    private int idxAfterHashTable;
+
+    public int chunkCount              => ConvertBits.FromInt32(ref raw, CHUNK_COUNT_POS); 
+    public int entryCount              => ConvertBits.FromInt32(ref raw, ENTRY_COUNT_POS);  
+    public int objectEID               => ConvertBits.FromInt32(ref raw, OBJECT_TYPE_POS);
+    public int UNK_1                   => ConvertBits.FromInt32(ref raw, UNKNOWN_1);
+    public int UNK_2                   => ConvertBits.FromInt32(ref raw, UNKNOWN_2);
+    public int UNK_3                   => ConvertBits.FromInt32(ref raw, UNKNOWN_3);
+    public int levelHeaderMagic        => ConvertBits.FromInt32(ref raw, idxAfterHashTable + 0);
+    public int levelID                 => ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE);
+    public int levelStartZoneEID       => ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 2);
+    public int levelStartCamPath       => ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 3);
+    public int UNK_4                   => ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 4);
     
 
 
     public NSD(string streamPath)
     {
-        byte[] raw;
         using FileStream fs = new FileStream(streamPath, FileMode.Open, FileAccess.Read);
         {
             raw = new byte[fs.Length];
@@ -57,13 +57,6 @@ public class NSD
 
         for(int offset = HASH_OFFSET_POS; offset < HASHTABLE_COUNT * PROPERTY_SIZE; offset += PROPERTY_SIZE)
             hashtableOffsets[offset] = ConvertBits.FromInt32(ref raw, offset);
-
-        chunkCount = ConvertBits.FromInt32(ref raw, CHUNK_COUNT_POS);
-        entryCount = ConvertBits.FromInt32(ref raw, ENTRY_COUNT_POS);
-        objectEID  = ConvertBits.FromInt32(ref raw, OBJECT_TYPE_POS);
-        UNK_1      = ConvertBits.FromInt32(ref raw, UNKNOWN_1);
-        UNK_2      = ConvertBits.FromInt32(ref raw, UNKNOWN_2);
-        UNK_3      = ConvertBits.FromInt32(ref raw, UNKNOWN_3);
 
         int idx = 0;
         for(int chunk = COMP_CHUNKS_POS; chunk < COMP_CHUNKS_POS + (COMP_CHNK_COUNT * PROPERTY_SIZE); chunk += PROPERTY_SIZE)
@@ -81,12 +74,8 @@ public class NSD
             idx++;
         }
 
-        int idxAfterHashTable = ENTRY_HASH_TABL + (entryCount * PROPERTY_SIZE * 2);
-        levelHeaderMagic      = ConvertBits.FromInt32(ref raw, idxAfterHashTable + 0);
-        levelID               = ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE);
-        levelStartZoneEID     = ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 2);
-        levelStartCamPath     = ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 3);
-        UNK_4                 = ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 4);
+        idxAfterHashTable = ENTRY_HASH_TABL + (entryCount * PROPERTY_SIZE * 2);
+
 
         idx = 0;
         int idxOfEIDmap = idxAfterHashTable + PROPERTY_SIZE * 5;
