@@ -6,19 +6,24 @@ public class Bootstrap : MonoBehaviour
 {
     public GameObject chunkDisplay;
     public string levelID;
+    public string streamLocation = "Assets/Streams/";
+
+    NSD levelHeader;
+    NSF levelData;
 
     void Start()
     {
         Debug.Log($"Attempting load at {levelID}");
-        NSF level = new($"Assets/Streams/{levelID}.nsf");
+        levelHeader = new($"{streamLocation}{levelID}.nsd");
+        levelData = new($"{streamLocation}{levelID}.nsf");
 
-        int chunksCount = level.chunks.Count;
+#region Chunk Visualiser
         List<Color> blocks = new();
-        foreach(Chunk chunk in level.chunks)
+        foreach(Chunk chunk in levelData.chunks)
             blocks.Add(chunk.disp);
 
         this.GetComponent<MeshRenderer>().material.SetInt("_ColourCount", blocks.Count);
         this.GetComponent<MeshRenderer>().material.SetColorArray("_Colours", blocks);
-
+#endregion
     }
 }
