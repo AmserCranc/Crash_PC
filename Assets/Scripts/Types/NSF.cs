@@ -9,6 +9,7 @@ public class NSF
 
     public NSF(string streamPath)
     {
+Debug.Log("New NSF");
 //Load the NSF file
         byte[] raw;
         using FileStream fs = new FileStream(streamPath, FileMode.Open, FileAccess.Read);
@@ -53,6 +54,7 @@ public class NSF
                     chunks.Add(new SpeechChunk(chunk.data)); break;    
             }
         }
+Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");
     }
 
     byte[] EnsureDecompressedChunk(ref byte[] nsfData, ref int offset, out bool isCompressed)

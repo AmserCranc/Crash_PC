@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 unsafe public abstract class Chunk
 {
@@ -16,6 +18,17 @@ unsafe public abstract class Chunk
         SPCH   = 5
     }
 
+    Dictionary<Type, Color> displayColour = new Dictionary<Type, Color>
+    {
+        {Type.NORM, Color.blue},
+        {Type.TEXT, Color.green},
+        {Type.OSND, Color.magenta},
+        {Type.NSND, Color.blue},
+        {Type.WBNK, Color.cyan},
+        {Type.SPCH, Color.black},
+
+    };
+
     public const int 
         MAGIC_POS   = 0x0,
         TYPE_POS    = 0x2,
@@ -29,6 +42,7 @@ unsafe public abstract class Chunk
     public byte[] data => raw;
     public int    id   => ConvertBits.FromInt32(ref raw, ID_POS);
     public Type   type => (Type)ConvertBits.FromInt16(ref raw, TYPE_POS);
+    public Color  disp => displayColour[type];
 
     public Chunk(byte[] _data)
     {
@@ -38,6 +52,4 @@ unsafe public abstract class Chunk
             throw new ArgumentException($"Data must be {LENGTH} bytes long.");
         this.raw = _data;
     }
-
-
 }
