@@ -1,7 +1,7 @@
 using UnityEngine;
 unsafe static public class ConvertBits
 {
-    public static int FromInt32(ref byte[] bits, int offset)
+    public static int FromInt32(byte[] bits, int offset)
     {
         if (bits == null)
             Debug.LogError("int32 is null");
@@ -19,7 +19,7 @@ unsafe static public class ConvertBits
         return result;
     }
 
-    public static short FromInt16(ref byte[] bits, int offset)
+    public static short FromInt16(byte[] bits, int offset)
     {
         if (bits == null)
             Debug.LogError("int32 is null");

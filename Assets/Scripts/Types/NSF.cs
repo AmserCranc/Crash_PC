@@ -24,7 +24,7 @@ Debug.Log("New NSF");
         while(offset < raw.Length)
         {
             bool isCompressed;
-            byte[] chunkData = EnsureDecompressedChunk(ref raw, ref offset, out isCompressed);
+            byte[] chunkData = EnsureDecompressedChunk(raw, ref offset, out isCompressed);
             UnprocessedChunk chunk = new(chunkData);
             unprocessedChunks.Add(chunk);
         }
@@ -57,7 +57,7 @@ Debug.Log("New NSF");
 Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");
     }
 
-    byte[] EnsureDecompressedChunk(ref byte[] nsfData, ref int offset, out bool isCompressed)
+    byte[] EnsureDecompressedChunk(byte[] nsfData, ref int offset, out bool isCompressed)
     {
         if(nsfData is null)                       throw new ArgumentNullException("nsfData");
         if(offset < 0 || offset > nsfData.Length) throw new ArgumentOutOfRangeException("offset");
@@ -65,7 +65,7 @@ Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");
 
         isCompressed = false;
         byte[] extractedRaw = new byte[Chunk.LENGTH];
-        short magic = ConvertBits.FromInt16(ref nsfData, offset); //First field of chunk
+        short magic = ConvertBits.FromInt16(nsfData, offset); //First field of chunk
         if(magic == Chunk.MAGIC)
         {
             isCompressed = false;
@@ -79,9 +79,9 @@ Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");
 #region DEBUG
 if (nsfData.Length < offset + 12) Debug.LogError($"Chunk begining at {offset}, of NSF, is too short");
 #endregion
-            short zero = ConvertBits.FromInt16(ref nsfData, offset + 2);
-            int length = ConvertBits.FromInt32(ref nsfData, offset + 4);
-            int skip   = ConvertBits.FromInt32(ref nsfData, offset + 8);
+            short zero = ConvertBits.FromInt16(nsfData, offset + 2);
+            int length = ConvertBits.FromInt32(nsfData, offset + 4);
+            int skip   = ConvertBits.FromInt32(nsfData, offset + 8);
 #region DEBUG
 if (zero != 0) Debug.Log("NSF.ReadChunk: Zero value is wrong");
 if (length < 0 || length > Chunk.LENGTH) Debug.LogError("NSF.ReadChunk: Length field is invalid");

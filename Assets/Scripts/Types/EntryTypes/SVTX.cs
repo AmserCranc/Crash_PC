@@ -2,16 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SVTX : MonoBehaviour
+public class SVTX : Entry
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
+    public SVTX(byte[] _data, int offset)
     {
         
     }

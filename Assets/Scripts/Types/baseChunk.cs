@@ -40,8 +40,8 @@ unsafe public abstract class Chunk
     private byte[] raw;
 
     public byte[] data => raw;
-    public int    id   => ConvertBits.FromInt32(ref raw, ID_POS);
-    public Type   type => (Type)ConvertBits.FromInt16(ref raw, TYPE_POS);
+    public int    id   => ConvertBits.FromInt32(raw, ID_POS);
+    public Type   type => (Type)ConvertBits.FromInt16(raw, TYPE_POS);
     public Color  disp => displayColour[type];
 
     public Chunk(byte[] _data)

@@ -1,9 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
-unsafe public abstract class Entry
+unsafe public class Entry
 {
     public const int MAGIC      = 0x100FFFF;
     public const int //data field offsets
@@ -32,22 +33,43 @@ unsafe public abstract class Entry
         CVTX = 20, //Cutscene vertex models
     }
 
+    public delegate Entry EntryFactory(byte[] data, int offset);
+
+    public static Dictionary<Type, EntryFactory> entryTypes = new Dictionary<Type, EntryFactory>
+    {
+        {Type.SVTX, (data, offset) => new SVTX(data, offset)},
+        {Type.TGEO, (data, offset) => new TGEO(data, offset)},
+        {Type.WGEO, (data, offset) => new WGEO(data, offset)},
+        {Type.SLST, (data, offset) => new SLST(data, offset)},
+        {Type.TPAG, (data, offset) => new TPAG(data, offset)},
+        {Type.LDAT, (data, offset) => new LDAT(data, offset)},
+        {Type.ZDAT, (data, offset) => new ZDAT(data, offset)},
+        {Type.GOOL, (data, offset) => new GOOL(data, offset)},
+        {Type.ADIO, (data, offset) => new ADIO(data, offset)},
+        {Type.MIDI, (data, offset) => new MIDI(data, offset)},
+        {Type.INST, (data, offset) => new INST(data, offset)},
+        {Type.IMAG, (data, offset) => new IMAG(data, offset)},
+        {Type.MDAT, (data, offset) => new MDAT(data, offset)},
+        {Type.IPAL, (data, offset) => new IPAL(data, offset)},
+        {Type.PBAK, (data, offset) => new PBAK(data, offset)},
+        {Type.CVTX, (data, offset) => new CVTX(data, offset)},
+    };
+
+
 
     public int[] itemOffsets;
+    public int length;
 
     private byte[] raw;
 
     public byte[] data  => raw;
-    public int magic    => ConvertBits.FromInt32(ref raw, pMAGIC);
-    public int id       => ConvertBits.FromInt32(ref raw, pID);
-    public Type type    => (Type)ConvertBits.FromInt16(ref raw, pTYPE);
+    public int magic    => ConvertBits.FromInt32(raw, pMAGIC);
+    public int id       => ConvertBits.FromInt32(raw, pID);
 
-
-    public Entry(byte[] _data)
+    public static EntryFactory ClassifyRaw(byte[] data, int offset)
     {
-        if (_data is null)
-            throw new ArgumentNullException("data");
-        this.raw = _data;
+        return entryTypes[(Type)ConvertBits.FromInt16(data, offset + pTYPE)];
     }
+
 
 }
