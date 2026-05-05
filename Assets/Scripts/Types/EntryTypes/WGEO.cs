@@ -1,10 +1,17 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class WGEO : Entry
 {
-    public WGEO(byte[] _data) : base(_data)
+    private byte[] raw;
+
+    
+
+
+
+    public WGEO(byte[] data, int offset) : base(data, offset)
     {
     }
 }

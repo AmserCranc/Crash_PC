@@ -10,7 +10,8 @@ unsafe public abstract class Entry
         pMAGIC      = 0x0,
         pID         = 0x4,
         pTYPE       = 0x8,
-        pITEM_COUNT = 0xC;
+        pITEM_COUNT = 0xC,
+        pITEM_OFFS  = 0x10;
 
     public enum Type : short
     {
@@ -33,21 +34,45 @@ unsafe public abstract class Entry
     }
 
 
-    public int[] itemOffsets;
-
     private byte[] raw;
+    private int idx;
 
-    public byte[] data  => raw;
-    public int magic    => ConvertBits.FromInt32(ref raw, pMAGIC);
-    public int id       => ConvertBits.FromInt32(ref raw, pID);
-    public Type type    => (Type)ConvertBits.FromInt16(ref raw, pTYPE);
+    public byte[] data          => raw;
+    public int magic            => ConvertBits.FromInt32(raw, idx + pMAGIC);
+    public int id               => ConvertBits.FromInt32(raw, idx + pID);
+    public Type type            => (Type)ConvertBits.FromInt16(raw, idx + pTYPE);
+    public int itemCount        => ConvertBits.FromInt32(raw, idx + pITEM_COUNT);
 
+    readonly public int size;
+  
 
-    public Entry(byte[] _data)
+    public Entry(byte[] data, int entryStart)
     {
-        if (_data is null)
-            throw new ArgumentNullException("data");
-        this.raw = _data;
+        // if (data is null)
+        //     throw new ArgumentNullException("data");
+
+        // idx = entryStart;
+        // size = CalculateSize();
+
+        
     }
+
+    public byte[] ExtractItem(int number)
+    {
+        int rootIDX     = ConvertBits.FromInt32(raw, idx + pITEM_OFFS + ( number       * sizeof(Int32)));
+        int finalIDX    = ConvertBits.FromInt32(raw, idx + pITEM_OFFS + ((number + 1)  * sizeof(Int32)));
+        int length      = finalIDX - rootIDX;
+
+        byte[] itemData = new byte[length];
+        Array.Copy(raw, rootIDX, itemData, 0, length);
+        return itemData;
+    }
+
+    // private int CalculateSize()
+    // {
+    //     int rootIDX     = ConvertBits.FromInt32(raw, idx + pITEM_OFFS);
+    //     int finalIDX    = ConvertBits.FromInt32(raw, idx + pITEM_OFFS + ( number       * sizeof(Int32)));
+    // }
+
 
 }

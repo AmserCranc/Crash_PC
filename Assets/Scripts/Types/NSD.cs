@@ -1,7 +1,9 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using UnityEngine;
 
 public class NSD
 {
@@ -25,25 +27,26 @@ public class NSD
         ENTRY_HASH_TABL = 0x520;
     
 
-    public int[] hashtableOffsets       = new int[HASHTABLE_COUNT];
-    public int[] compressedChunkOffsets = new int[COMPCHUNK_COUNT];
-    public int[] execEIDmap             = new int[E_EID_MAP_COUNT];
+    public int[] hashtableOffsets       = new int[HASHTABLE_COUNT * PROPERTY_SIZE];
+    public int[] compressedChunkOffsets = new int[COMPCHUNK_COUNT * PROPERTY_SIZE];
+    public int[] execEIDmap             = new int[E_EID_MAP_COUNT * PROPERTY_SIZE];
     public int[] entryHashTable; 
 
     private byte[] raw;
     private int idxAfterHashTable;
+    private int idxOfEIDmap;
 
-    public int chunkCount              => ConvertBits.FromInt32(ref raw, CHUNK_COUNT_POS); 
-    public int entryCount              => ConvertBits.FromInt32(ref raw, ENTRY_COUNT_POS);  
-    public int objectEID               => ConvertBits.FromInt32(ref raw, OBJECT_TYPE_POS);
-    public int UNK_1                   => ConvertBits.FromInt32(ref raw, UNKNOWN_1);
-    public int UNK_2                   => ConvertBits.FromInt32(ref raw, UNKNOWN_2);
-    public int UNK_3                   => ConvertBits.FromInt32(ref raw, UNKNOWN_3);
-    public int levelHeaderMagic        => ConvertBits.FromInt32(ref raw, idxAfterHashTable + 0);
-    public int levelID                 => ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE);
-    public int levelStartZoneEID       => ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 2);
-    public int levelStartCamPath       => ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 3);
-    public int UNK_4                   => ConvertBits.FromInt32(ref raw, idxAfterHashTable + PROPERTY_SIZE * 4);
+    public int chunkCount              => ConvertBits.FromInt32(raw, CHUNK_COUNT_POS); 
+    public int entryCount              => ConvertBits.FromInt32(raw, ENTRY_COUNT_POS);  
+    public int objectEID               => ConvertBits.FromInt32(raw, OBJECT_TYPE_POS);
+    public int UNK_1                   => ConvertBits.FromInt32(raw, UNKNOWN_1);
+    public int UNK_2                   => ConvertBits.FromInt32(raw, UNKNOWN_2);
+    public int UNK_3                   => ConvertBits.FromInt32(raw, UNKNOWN_3);
+    public int levelHeaderMagic        => ConvertBits.FromInt32(raw, idxAfterHashTable + 0);
+    public int levelID                 => ConvertBits.FromInt32(raw, idxAfterHashTable + PROPERTY_SIZE);
+    public int levelStartZoneEID       => ConvertBits.FromInt32(raw, idxAfterHashTable + PROPERTY_SIZE * 2);
+    public int levelStartCamPath       => ConvertBits.FromInt32(raw, idxAfterHashTable + PROPERTY_SIZE * 3);
+    public int UNK_4                   => ConvertBits.FromInt32(raw, idxAfterHashTable + PROPERTY_SIZE * 4);
     
 
 
@@ -54,35 +57,77 @@ public class NSD
             raw = new byte[fs.Length];
             fs.Read(raw, 0, raw.Length);
         }
-
-        for(int offset = HASH_OFFSET_POS; offset < HASHTABLE_COUNT * PROPERTY_SIZE; offset += PROPERTY_SIZE)
-            hashtableOffsets[offset] = ConvertBits.FromInt32(ref raw, offset);
-
-        int idx = 0;
-        for(int chunk = COMP_CHUNKS_POS; chunk < COMP_CHUNKS_POS + (COMP_CHNK_COUNT * PROPERTY_SIZE); chunk += PROPERTY_SIZE)
-        {
-            compressedChunkOffsets[idx] = ConvertBits.FromInt32(ref raw, chunk);
-            idx++;
-        }
-            
-        idx = 0;
-        entryHashTable = new int[entryCount];
-        for(int entry = ENTRY_HASH_TABL; entry < ENTRY_HASH_TABL + (entryCount * PROPERTY_SIZE * 2); entry += PROPERTY_SIZE * 2)
-        {
-            entryHashTable[idx    ] = ConvertBits.FromInt32(ref raw, entry);
-            entryHashTable[idx + 1] = ConvertBits.FromInt32(ref raw, entry + PROPERTY_SIZE);
-            idx++;
-        }
-
+           
         idxAfterHashTable = ENTRY_HASH_TABL + (entryCount * PROPERTY_SIZE * 2);
+        idxOfEIDmap = idxAfterHashTable + PROPERTY_SIZE * 5;
 
 
-        idx = 0;
-        int idxOfEIDmap = idxAfterHashTable + PROPERTY_SIZE * 5;
-        for(int EID = idxOfEIDmap; EID < idxOfEIDmap + (PROPERTY_SIZE * E_EID_MAP_COUNT); EID += PROPERTY_SIZE)
+    }
+
+#region NSDLink
+    public NSDLink GetNSDLink(int idx)
+    {
+        const int STRIDE = sizeof(Int32) * 2;
+
+        if(idx > HASHTABLE_COUNT) throw new IndexOutOfRangeException();
+
+        int offset = HASH_OFFSET_POS + (idx * STRIDE);
+
+        return new NSDLink(
+            _chunkid: ConvertBits.FromInt32(raw, offset                ),
+            _entryid: ConvertBits.FromInt32(raw, offset + sizeof(Int32))
+        );
+    }
+
+    public struct NSDLink
+    {
+        public int chunkID;
+        public int entryID;
+
+        public NSDLink(int _chunkid, int _entryid)
         {
-            execEIDmap[idx] = ConvertBits.FromInt32(ref raw, EID);
-            idx++;
+            chunkID = _chunkid;
+            entryID = _entryid;
         }
     }
+#endregion
+#region Hashtable Offset
+    public int GetHashtableOffset(int idx)
+    {
+        const int STRIDE = sizeof(Int32);
+
+        if(idx > HASHTABLE_COUNT) throw new IndexOutOfRangeException();
+
+        int offset = HASH_OFFSET_POS + (idx * STRIDE);
+
+        return ConvertBits.FromInt32(raw, offset);
+    }
+#endregion
+#region Compressed Chunk Offset
+    public int GetCompressedChunkOffsets(int idx)
+    {
+        const int STRIDE = sizeof(Int32);
+
+        if(idx > COMPCHUNK_COUNT) throw new IndexOutOfRangeException();
+
+        int offset = COMP_CHUNKS_POS + (idx * STRIDE);
+
+        return ConvertBits.FromInt32(raw, offset);
+    }
+#endregion
+#region Entry EID Map
+    public int GetEIDfromMap(int idx)
+    {
+        const int STRIDE = sizeof(Int32);
+
+        if(idx > E_EID_MAP_COUNT) throw new IndexOutOfRangeException();
+
+        int offset = idxOfEIDmap + (idx * STRIDE);
+
+        return ConvertBits.FromInt32(raw, offset);
+    }
+#endregion
+
+
+
 }
