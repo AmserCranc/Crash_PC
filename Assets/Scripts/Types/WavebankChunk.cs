@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class WavebankChunk : Chunk
 {
-    public WavebankChunk(byte[] _data) : base(_data)
+    public WavebankChunk(Chunk _chunk) : base(_chunk.data)
     {
         
     }

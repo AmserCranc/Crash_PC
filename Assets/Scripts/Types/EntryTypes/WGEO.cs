@@ -5,13 +5,8 @@ using UnityEngine;
 
 public class WGEO : Entry
 {
-    private byte[] raw;
-
-    
-
-
-
-    public WGEO(byte[] data, int offset) : base(data, offset)
+    public WGEO(Entry _entry) : base(_entry.data)
     {
+        
     }
 }

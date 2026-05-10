@@ -22,7 +22,7 @@ unsafe static public class ConvertBits
     public static short FromInt16(byte[] bits, int offset)
     {
         if (bits == null)
-            Debug.LogError("int32 is null");
+            Debug.LogError("int16 is null");
         if (offset < 0)
             Debug.LogError("offset too low");
         if (offset + 2 > bits.Length)

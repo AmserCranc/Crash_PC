@@ -6,6 +6,7 @@ using UnityEngine;
 public class NSF
 {
     public List<Chunk> chunks;
+    public NSD nsd;
 
     public NSF(string streamPath)
     {
@@ -36,22 +37,22 @@ Debug.Log("New NSF");
             switch(chunk.type)
             {
                 case Chunk.Type.NORM:
-                    chunks.Add(new NormalChunk(chunk.data)); break;
+                    chunks.Add(new NormalChunk(chunk)); break;
                     
                 case Chunk.Type.TEXT:
-                    chunks.Add(new TextureChunk(chunk.data)); break;
+                    chunks.Add(new TextureChunk(chunk)); break;
                     
                 case Chunk.Type.OSND:
-                    chunks.Add(new OldSoundChunk(chunk.data)); break;
+                    chunks.Add(new OldSoundChunk(chunk)); break;
                     
                 case Chunk.Type.NSND:
-                    chunks.Add(new SoundChunk(chunk.data)); break;
+                    chunks.Add(new SoundChunk(chunk)); break;
                     
                 case Chunk.Type.WBNK:
-                    chunks.Add(new WavebankChunk(chunk.data)); break;
+                    chunks.Add(new WavebankChunk(chunk)); break;
 
                 case Chunk.Type.SPCH:
-                    chunks.Add(new SpeechChunk(chunk.data)); break;    
+                    chunks.Add(new SpeechChunk(chunk)); break;    
             }
         }
 Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");

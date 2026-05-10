@@ -1,26 +1,27 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditorInternal.Profiling.Memory.Experimental.FileFormat;
 using UnityEngine;
 
 public class NormalChunk : Chunk
 {
-    public NormalChunk(byte[] _data) : base(_data)
+    public List<Entry> entries;
+
+    public NormalChunk(Chunk _chunk) : base(_chunk.data)
     {
-        byte[] raw = _data;
-
-        int offset = 0;
-        while(offset < raw.Length)
+        entries = new List<Entry>();
+    
+        List<Entry> unprocessedEntries = new List<Entry>();
+        for(int item = 0; item < entryCount; item++)
         {
-            
-            
-
-
-
-
-
-            //byte[] chunkData = Array.Copy(raw, offset, )
+            Vector2 entryBounds = GetEntryBounds(item);
+            byte[] entryData = new byte[(int)entryBounds.y - (int)entryBounds.x]; 
+            Array.Copy(_chunk.data, (int)entryBounds.x, entryData, 0, (int)entryBounds.y - (int)entryBounds.x);
+            unprocessedEntries.Add(new Entry(entryData));
         }
-        
-        
+
+        foreach(Entry e in unprocessedEntries)
+            entries.Add(e.Classify());
     }
 }

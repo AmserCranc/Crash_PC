@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-unsafe public abstract class Entry
+unsafe public class Entry
 {
     public const int MAGIC      = 0x100FFFF;
     public const int //data field offsets
@@ -35,44 +35,57 @@ unsafe public abstract class Entry
 
 
     private byte[] raw;
-    private int idx;
+    //private int idx;
 
     public byte[] data          => raw;
-    public int magic            => ConvertBits.FromInt32(raw, idx + pMAGIC);
-    public int id               => ConvertBits.FromInt32(raw, idx + pID);
-    public Type type            => (Type)ConvertBits.FromInt16(raw, idx + pTYPE);
-    public int itemCount        => ConvertBits.FromInt32(raw, idx + pITEM_COUNT);
+    public int magic            => ConvertBits.FromInt32(raw, pMAGIC);
+    public int id               => ConvertBits.FromInt32(raw, pID);
+    public Type type            => (Type)ConvertBits.FromInt16(raw, pTYPE);
+    public int itemCount        => ConvertBits.FromInt32(raw, pITEM_COUNT);
 
     readonly public int size;
   
 
-    public Entry(byte[] data, int entryStart)
+    public Entry(byte[] _data)
     {
-        // if (data is null)
-        //     throw new ArgumentNullException("data");
+        raw = _data;
 
-        // idx = entryStart;
-        // size = CalculateSize();
+        if(magic != MAGIC) throw new Exception("Entry has incorrect magic");
+    }
 
-        
+    public Entry Classify()
+    {
+        switch(type)
+        {
+            case Type.SVTX: return new SVTX(this);
+            case Type.TGEO: return new TGEO(this);
+            case Type.WGEO: return new WGEO(this);
+            case Type.SLST: return new SLST(this);
+            case Type.TPAG: return new TPAG(this);
+            case Type.LDAT: return new LDAT(this);
+            case Type.ZDAT: return new ZDAT(this);
+            case Type.GOOL: return new GOOL(this);
+            case Type.ADIO: return new ADIO(this);
+            case Type.MIDI: return new MIDI(this);
+            case Type.INST: return new INST(this);
+            case Type.IMAG: return new IMAG(this);
+            case Type.MDAT: return new MDAT(this);
+            case Type.IPAL: return new IPAL(this);
+            case Type.PBAK: return new PBAK(this);
+            case Type.CVTX: return new CVTX(this);
+
+            default: throw new Exception($"Entry type not recognised {type}");
+        }
     }
 
     public byte[] ExtractItem(int number)
     {
-        int rootIDX     = ConvertBits.FromInt32(raw, idx + pITEM_OFFS + ( number       * sizeof(Int32)));
-        int finalIDX    = ConvertBits.FromInt32(raw, idx + pITEM_OFFS + ((number + 1)  * sizeof(Int32)));
+        int rootIDX     = ConvertBits.FromInt32(raw, pITEM_OFFS + ( number       * sizeof(Int32)));
+        int finalIDX    = ConvertBits.FromInt32(raw, pITEM_OFFS + ((number + 1)  * sizeof(Int32)));
         int length      = finalIDX - rootIDX;
 
         byte[] itemData = new byte[length];
         Array.Copy(raw, rootIDX, itemData, 0, length);
         return itemData;
     }
-
-    // private int CalculateSize()
-    // {
-    //     int rootIDX     = ConvertBits.FromInt32(raw, idx + pITEM_OFFS);
-    //     int finalIDX    = ConvertBits.FromInt32(raw, idx + pITEM_OFFS + ( number       * sizeof(Int32)));
-    // }
-
-
 }

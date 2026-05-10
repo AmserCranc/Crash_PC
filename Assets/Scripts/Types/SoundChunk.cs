@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class SoundChunk : Chunk
 {
-    public SoundChunk(byte[] _data) : base(_data)
+    public SoundChunk(Chunk _chunk) : base(_chunk.data)
     {
         
     }

@@ -8,8 +8,8 @@ public class Bootstrap : MonoBehaviour
     public string levelID;
     public string streamLocation = "Assets/Streams/";
 
-    NSD levelHeader;
-    NSF levelData;
+    public NSD levelHeader;
+    public NSF levelData;
 
     void Start()
     {

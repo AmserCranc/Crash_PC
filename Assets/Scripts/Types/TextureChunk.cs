@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class TextureChunk : Chunk
 {
-    public TextureChunk(byte[] _data) : base(_data)
+    public TextureChunk(Chunk _chunk) : base(_chunk.data)
     {
         
     }
