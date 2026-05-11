@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEditorInternal.Profiling.Memory.Experimental.FileFormat;
 using UnityEngine;
 
 public class NormalChunk : Chunk
@@ -13,9 +11,9 @@ public class NormalChunk : Chunk
         entries = new List<Entry>();
     
         List<Entry> unprocessedEntries = new List<Entry>();
-        for(int item = 0; item < entryCount; item++)
+        for(int entry = 0; entry < entryCount; entry++)
         {
-            Vector2 entryBounds = GetEntryBounds(item);
+            Vector2 entryBounds = GetEntryBounds(entry);
             byte[] entryData = new byte[(int)entryBounds.y - (int)entryBounds.x]; 
             Array.Copy(_chunk.data, (int)entryBounds.x, entryData, 0, (int)entryBounds.y - (int)entryBounds.x);
             unprocessedEntries.Add(new Entry(entryData));

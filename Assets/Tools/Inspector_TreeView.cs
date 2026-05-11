@@ -39,7 +39,7 @@ public class NSFTreeView : TreeView
                 foreach (var entry in normal.entries)
                 {
                     var entryItem =
-                        CreateItem(entry.type.ToString(), entry);
+                        CreateItem(chunk.type.ToString(), entry);
 
                     chunkItem.AddChild(entryItem);
                 }

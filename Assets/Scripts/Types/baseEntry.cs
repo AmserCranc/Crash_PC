@@ -16,7 +16,7 @@ unsafe public class Entry
     public enum Type : short
     {
         SVTX =  1, //Object model animation keyframes
-        TGEO =  2, //Geometry used by T1-type objects
+        TGEO =  2, //used by T1-type objects
         WGEO =  3, //World Geometry
         SLST =  4, //Camera geometry ordering list
         TPAG =  5, //Texture data and CLUT
@@ -80,6 +80,9 @@ unsafe public class Entry
 
     public byte[] ExtractItem(int number)
     {
+        if(number > itemCount) throw new Exception("tried to access out-of-range item");
+        if(number < 0)         throw new Exception("tries to access <0 index item");
+
         int rootIDX     = ConvertBits.FromInt32(raw, pITEM_OFFS + ( number       * sizeof(Int32)));
         int finalIDX    = ConvertBits.FromInt32(raw, pITEM_OFFS + ((number + 1)  * sizeof(Int32)));
         int length      = finalIDX - rootIDX;
