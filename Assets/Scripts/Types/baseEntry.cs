@@ -91,4 +91,10 @@ unsafe public class Entry
         Array.Copy(raw, rootIDX, itemData, 0, length);
         return itemData;
     }
+
+
+    virtual public void DrawToTreeView(NSFInspectorWindow n)
+    {
+        
+    }
 }

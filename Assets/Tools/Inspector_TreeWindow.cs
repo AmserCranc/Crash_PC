@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -93,5 +95,30 @@ public class NSFInspectorWindow : EditorWindow
         EditorGUILayout.LabelField(
             "Entry",
             e.GetType().ToString());
+
+        e.DrawToTreeView(this);
+    }
+
+
+    public static string ToBinaryString(byte[] data)
+    {
+        if (data == null || data.Length == 0)
+            return string.Empty;
+
+        return string.Join(
+            "_",
+            data.Select(b => Convert.ToString(b, 2).PadLeft(8, '0'))
+        );
+    }
+
+    public static string ToHexString(byte[] data)
+    {
+        if (data == null || data.Length == 0)
+            return string.Empty;
+
+        return string.Join(
+            "_",
+            data.Select(b => b.ToString("X2"))
+        );
     }
 }

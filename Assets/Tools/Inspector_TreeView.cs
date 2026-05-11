@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEditor.IMGUI.Controls;
 
 public class NSFTreeView : TreeView
@@ -22,10 +23,11 @@ public class NSFTreeView : TreeView
         _lookup.Clear();
         _nextId = 1;
 
-        var root = CreateItem("Root", null);
-        root.AddChild(CreateItem("Header", _nsf.nsd));
-        var nsfItem = CreateItem("NSF", _nsf);
+        var root = new TreeViewItem(0, -1, "Root");
 
+        root.AddChild(CreateItem("Header", _nsf.nsd));
+
+        var nsfItem = CreateItem("NSF", _nsf);
         root.AddChild(nsfItem);
 
         foreach (var chunk in _nsf.chunks)
@@ -39,7 +41,7 @@ public class NSFTreeView : TreeView
                 foreach (var entry in normal.entries)
                 {
                     var entryItem =
-                        CreateItem(chunk.type.ToString(), entry);
+                        CreateItem(entry.type.ToString(), entry);
 
                     chunkItem.AddChild(entryItem);
                 }

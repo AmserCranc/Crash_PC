@@ -19,20 +19,26 @@ public class NSFBrowserWindow : EditorWindow
 
     private void OnEnable()
     {
+
+    }
+
+    private void OnGUI()
+    {
+        if(_nsf == null) CreateUI();
+        _treeView.OnGUI(new Rect(
+            0,
+            0,
+            position.width,
+            position.height));
+    }
+
+    private void CreateUI()
+    {
         b = GameObject.Find("Bootstrap").GetComponent<Bootstrap>();
         _treeState ??= new TreeViewState();
 
         _nsf = b.levelData;
 
         _treeView = new NSFTreeView(_treeState, _nsf);
-    }
-
-    private void OnGUI()
-    {
-        _treeView.OnGUI(new Rect(
-            0,
-            0,
-            position.width,
-            position.height));
     }
 }
