@@ -29,6 +29,9 @@ unsafe public class Chunk
 
     };
 
+    // 0x0  ||MAGIC¦TYPE|ID         |ENTRY_COUNT|CHECKSUM   |
+    // 0x10 ||ENT_OFSETS-           -           -           =
+
     public const int 
         pMAGIC       = 0x0,
         pTYPE        = 0x2,

@@ -5,6 +5,10 @@ using UnityEngine;
 
 unsafe public class Entry
 {
+    // 0x0  ||MAGIC     |ID         |TYPE       |ITEM_COUNT |
+    // 0x10 ||ITM_OFSETS-           -           -           -
+
+
     public const int MAGIC      = 0x100FFFF;
     public const int //data field offsets
         pMAGIC      = 0x0,
@@ -92,6 +96,35 @@ unsafe public class Entry
         return itemData;
     }
 
+    public byte[][] ExtractAllItems()
+    {
+        byte[][] items = new byte[itemCount][];
+
+        // Read all root indices
+        int[] roots = new int[itemCount + 1];
+
+        for (int i = 0; i <= itemCount; i++)
+        {
+            roots[i] = ConvertBits.FromInt32(
+                raw,
+                pITEM_OFFS + (i * sizeof(int))
+            );
+        }
+
+        for (int i = 0; i < itemCount; i++)
+        {
+            int start = roots[i];
+            int end   = roots[i + 1];
+            int len   = end - start;
+
+            byte[] itemData = new byte[len];
+            Array.Copy(raw, start, itemData, 0, len);
+
+            items[i] = itemData;
+        }
+
+        return items;
+    }
 
     virtual public void DrawToTreeView(NSFInspectorWindow n)
     {
