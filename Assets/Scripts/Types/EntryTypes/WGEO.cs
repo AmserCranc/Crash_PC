@@ -5,6 +5,7 @@ using UnityEngine;
 using Unity.Mathematics;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using System.Linq;
 
 public class WGEO : Entry
 {
@@ -42,7 +43,8 @@ public class WGEO : Entry
 
     public int GetTPage(int idx) => ConvertBits.FromInt32(rawHeader, pTEX_PAGES + sizeof(Int32) * idx);
 
-    public ConcurrentBag<WGEO_Polygon> polygons;
+    public List<WGEO_polygon> polygons;
+    public List<WGEO_vertex> verts;
 
 
     public WGEO(Entry _entry) : base(_entry.data)
@@ -50,8 +52,14 @@ public class WGEO : Entry
         rawData = _entry.ExtractAllItems();
 
         polygons = new();
-        for(int index = 0; index < rawPolys.Length; index++)
-            polygons.Add(new WGEO_Polygon(rawPolys, index * WGEO_Polygon.DATA_LEGNTH));
+        for(int index = 0; index < polyCount; index++)
+            polygons.Add(new WGEO_polygon(rawPolys, index * WGEO_polygon.DATA_LENGTH));
+
+        verts = new();
+        for(int index = 0; index < vertCount; index++)
+            verts.Add(new WGEO_vertex(rawVerts, index * WGEO_vertex.DATA_LENGTH));
+
+        PlaceTerrain();
     }
 
     public WGEO_struct GetModelStruct(int _index)
@@ -73,10 +81,10 @@ public class WGEO : Entry
 
     }
 
-    public struct WGEO_Polygon
+    public struct WGEO_polygon
     {
         public const int
-            DATA_LEGNTH = 8;
+            DATA_LENGTH = 8;
 
         private int offset;
         private byte[] rawData;
@@ -88,11 +96,11 @@ public class WGEO : Entry
         public int vertC       => (      wordB >> 20) & 0b1111_1111_1111;
         public int modelstruct => (      wordA >> 8 ) & 0b1111_1111_1111;
         public byte page       => (byte)(wordA >> 5   & 0b0111);
-        public byte anim0      => (byte)(wordA        & 0b0001_0000);
+        public byte anim0      => (byte)(wordA        & 0b0001_1111);
         public byte unknown    => (byte)(wordB        & 0b1111_1111);
 
 
-        public WGEO_Polygon(byte[] _polyData, int _index)
+        public WGEO_polygon(byte[] _polyData, int _index)
         {
             rawData = _polyData;
             offset = _index;
@@ -106,7 +114,7 @@ public class WGEO : Entry
         private byte[] raw;
 
         public int  texInfo     => ConvertBits.FromInt32(raw, 4);
-        public int  UVindex     =>        (texInfo >> 22) & 0b0011_0000_0000;
+        public int  UVindex     =>        (texInfo >> 22) & 0b0011_1111_1111;
         public byte colourRed   =>         raw[0];
         public byte colourBlue  =>         raw[1];
         public byte colourGreen =>         raw[2];
@@ -154,10 +162,10 @@ public class WGEO : Entry
         }
     }
 
-    private struct WGEO_face
+    public struct WGEO_face
     {
-        public uint2x3 UV;
-        public int3x3 verts;
+        public float2x3 UV;
+        public float3x3 verts;
         public Color32 RGBA_0;
         public Color32 RGBA_1;
         public Color32 RGBA_2;
@@ -167,80 +175,169 @@ public class WGEO : Entry
     {
         const uint pageWidth = 512;
 
-        ConcurrentBag<WGEO_face> faces = new();
-        Parallel.ForEach(polygons, (WGEO_Polygon p) =>
+        List<WGEO_face> faces = new();
+        foreach(WGEO_polygon p in polygons)
         {
             WGEO_struct str = GetModelStruct(p.modelstruct);
 
             if(str is WGEO_textured texFace)
             {
                 WGEO_face f = new();
-                f.UV.c2 = new ((uint)(texFace.U1 / pageWidth * -1), (uint)texFace.V1 / 128);
-                f.UV.c1 = new ((uint)(texFace.U2 / pageWidth * -1), (uint)texFace.V2 / 128);
-                f.UV.c0 = new ((uint)(texFace.U3 / pageWidth * -1), (uint)texFace.V3 / 128);
+                f.UV.c2 = new (texFace.U1 / pageWidth * -1, texFace.V1 / 128);
+                f.UV.c1 = new (texFace.U2 / pageWidth * -1, texFace.V2 / 128);
+                f.UV.c0 = new (texFace.U3 / pageWidth * -1, texFace.V3 / 128);
 
-                f.verts.c0 = new float3((XOff + GetVert(p.vertA).X) *-1 / WGEO_SCALE, (YOff + GetVert(p.vertA).Y) / WGEO_SCALE, (ZOff + GetVert(p.vertA).Z) / WGEO_SCALE);
-                f.verts.c0 = new float3((XOff + GetVert(p.vertB).X) *-1 / WGEO_SCALE, (YOff + GetVert(p.vertB).Y) / WGEO_SCALE, (ZOff + GetVert(p.vertB).Z) / WGEO_SCALE);
-                f.verts.c0 = new float3((XOff + GetVert(p.vertC).X) *-1 / WGEO_SCALE, (YOff + GetVert(p.vertC).Y) / WGEO_SCALE, (ZOff + GetVert(p.vertC).Z) / WGEO_SCALE);
+                f.verts.c2 = new float3((float)(XOff + verts[p.vertA].x) *-1 / WGEO_SCALE, (float)(YOff + verts[p.vertA].y) / WGEO_SCALE, (float)(ZOff + verts[p.vertA].z) / WGEO_SCALE);
+                f.verts.c1 = new float3((float)(XOff + verts[p.vertB].x) *-1 / WGEO_SCALE, (float)(YOff + verts[p.vertB].y) / WGEO_SCALE, (float)(ZOff + verts[p.vertB].z) / WGEO_SCALE);
+                f.verts.c0 = new float3((float)(XOff + verts[p.vertC].x) *-1 / WGEO_SCALE, (float)(YOff + verts[p.vertC].y) / WGEO_SCALE, (float)(ZOff + verts[p.vertC].z) / WGEO_SCALE);
 
-                                    
-                f.RGBA_0 = new Color32(rawVerts[p.vertA].colourRed, rawVerts[p.vertA].colourGreen, rawVerts[p.vertA].colourBlue, 1);
-                f.RGBA_1 = new Color32(rawVerts[p.vertB].colourRed, rawVerts[p.vertB].colourGreen, rawVerts[p.vertB].colourBlue, 1); 
-                f.RGBA_2 = new Color32(rawVerts[p.vertC].colourRed, rawVerts[p.vertC].colourGreen, rawVerts[p.vertC].colourBlue, 1); 
+                f.RGBA_0 = new Color32(verts[p.vertA].red, verts[p.vertA].green, verts[p.vertA].blue, 1);
+                f.RGBA_1 = new Color32(verts[p.vertB].red, verts[p.vertB].green, verts[p.vertB].blue, 1); 
+                f.RGBA_2 = new Color32(verts[p.vertC].red, verts[p.vertC].green, verts[p.vertC].blue, 1); 
+
+                faces.Add(f);
             }
 
-        });
+        }
+        GameObject go = new();
+        MeshFilter mf = go.AddComponent<MeshFilter>();
+        MeshRenderer mr = go.AddComponent<MeshRenderer>();
+        mf.mesh = BuildMesh(faces);
+        Material mat = new Material(Shader.Find("Custom/DisplayNormals"));
+        mr.material = mat;
 
-        Mesh m = new();
+        
 
         
     }
-#region later
-    public struct WGEO_ModelTri
+
+    public static Mesh BuildMesh(List<WGEO_face> faces)
     {
-        public const byte NullPtr = 0x57;
+        Mesh mesh = new Mesh();
 
-        // || Little Endian
-        // || YYSSFTLL PPPPPPPP CCCCCCCA XXXXXXXX
-        const int
-            pTEX_IDX    = 0x0,
-            pANIMATED   = 0x8,
-            pCOLOUR     = 0x9,
-            pKEY        = 0x10,
-            pUNKNOWN    = 0x18,
-            pIDX_TYPE   = 0x1A,
-            pFLAG       = 0x1B,
-            pTRI_TYPE   = 0x1C;
+        List<Vector3> vertices = new();
+        List<Vector2> uvs      = new();
+        List<Color32> colors   = new();
+        List<int> triangles    = new();
 
-        private uint raw;
+        int index = 0;
 
-        public byte texture   => (byte) raw;
-        public bool animated  =>       (raw >> pANIMATED & 0b0000_0001) != 0;
-        public byte colour    => (byte)(raw >> pCOLOUR   & 0b0001_1111);
-        public byte key       => (byte)(raw >> pKEY);
-        public byte unknown   => (byte)(raw >> pUNKNOWN  & 0b0000_0011);
-        public byte indexType => (byte)(raw >> pIDX_TYPE & 0b0000_0001);
-        public bool flag      =>       (raw >> pFLAG     & 0b0000_0001) != 0;
-        public byte triType   => (byte)(raw >> pTRI_TYPE);
-
-
-        public WGEO_ModelTri(uint _data)
+        foreach (WGEO_face face in faces)
         {
-            raw = _data;
+            //
+            // Positions
+            //
+
+            vertices.Add(new Vector3(
+                face.verts.c0.x,
+                face.verts.c0.y,
+                face.verts.c0.z));
+
+            vertices.Add(new Vector3(
+                face.verts.c1.x,
+                face.verts.c1.y,
+                face.verts.c1.z));
+
+            vertices.Add(new Vector3(
+                face.verts.c2.x,
+                face.verts.c2.y,
+                face.verts.c2.z));
+
+            //
+            // UVs
+            //
+
+            uvs.Add(new Vector2(
+                face.UV.c0.x,
+                face.UV.c0.y));
+
+            uvs.Add(new Vector2(
+                face.UV.c1.x,
+                face.UV.c1.y));
+
+            uvs.Add(new Vector2(
+                face.UV.c2.x,
+                face.UV.c2.y));
+
+            //
+            // Colors
+            //
+
+            colors.Add(face.RGBA_0);
+            colors.Add(face.RGBA_1);
+            colors.Add(face.RGBA_2);
+
+            //
+            // Triangle indices
+            //
+
+            triangles.Add(index + 0);
+            triangles.Add(index + 1);
+            triangles.Add(index + 2);
+
+            index += 3;
         }
+
+        //
+        // Upload
+        //
+
+        mesh.SetVertices(vertices);
+        mesh.SetUVs(0, uvs);
+        mesh.SetColors(colors);
+        mesh.SetTriangles(triangles, 0);
+        mesh.RecalculateBounds();
+        mesh.RecalculateNormals();
+
+        return mesh;
     }
+} 
+// #region later
+//     public struct WGEO_ModelTri
+//     {
+//         public const byte NullPtr = 0x57;
 
-    public struct WGEO_ModelTriColour
-    {
-        private uint raw;
+//         // || Little Endian
+//         // || YYSSFTLL PPPPPPPP CCCCCCCA XXXXXXXX
+//         const int
+//             pTEX_IDX    = 0x0,
+//             pANIMATED   = 0x8,
+//             pCOLOUR     = 0x9,
+//             pKEY        = 0x10,
+//             pUNKNOWN    = 0x18,
+//             pIDX_TYPE   = 0x1A,
+//             pFLAG       = 0x1B,
+//             pTRI_TYPE   = 0x1C;
 
-        public byte colour1 => (byte)(raw >> 2 & 0b0001_1111);
-        public byte colour2 => (byte)(raw >> 9 & 0b0001_1111);
+//         private uint raw;
 
-        public WGEO_ModelTriColour(uint _data)
-        {
-            raw = _data;
-        }
-    }
-#endregion
-}
+//         public byte texture   => (byte) raw;
+//         public bool animated  =>       (raw >> pANIMATED & 0b0000_0001) != 0;
+//         public byte colour    => (byte)(raw >> pCOLOUR   & 0b0001_1111);
+//         public byte key       => (byte)(raw >> pKEY);
+//         public byte unknown   => (byte)(raw >> pUNKNOWN  & 0b0000_0011);
+//         public byte indexType => (byte)(raw >> pIDX_TYPE & 0b0000_0001);
+//         public bool flag      =>       (raw >> pFLAG     & 0b0000_0001) != 0;
+//         public byte triType   => (byte)(raw >> pTRI_TYPE);
+
+
+//         public WGEO_ModelTri(uint _data)
+//         {
+//             raw = _data;
+//         }
+//     }
+
+//     public struct WGEO_ModelTriColour
+//     {
+//         private uint raw;
+
+//         public byte colour1 => (byte)(raw >> 2 & 0b0001_1111);
+//         public byte colour2 => (byte)(raw >> 9 & 0b0001_1111);
+
+//         public WGEO_ModelTriColour(uint _data)
+//         {
+//             raw = _data;
+//         }
+//     }
+// #endregion
+
