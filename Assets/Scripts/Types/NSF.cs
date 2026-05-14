@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 public class NSF
@@ -10,145 +11,193 @@ public class NSF
 
     public NSF(string streamPath)
     {
-Debug.Log("New NSF");
-//Load the NSF file
+        Debug.Log("New NSF");
+
+        
+        GLOBAL.WGEO_material = new Material(Shader.Find("Custom/WGEO_PS1"));
+        GLOBAL.HUD = new Material(Shader.Find("Custom/WGEO_PS1"));
+
         byte[] raw;
-        using FileStream fs = new FileStream(streamPath, FileMode.Open, FileAccess.Read);
+        using (FileStream fs = new FileStream(streamPath, FileMode.Open, FileAccess.Read))
         {
             raw = new byte[fs.Length];
             fs.Read(raw, 0, raw.Length);
         }
 
-//Decompress the chunks, where needed
-        List<Chunk> unprocessedChunks = new();
+        List<Chunk> mainChunks = new();
         int offset = 0;
-        while(offset < raw.Length)
+
+        int? firstChunkId = null;
+        bool inPrelude = false;
+        List<Chunk> prelude = null;
+
+        while (offset < raw.Length)
         {
             bool isCompressed;
             byte[] chunkData = EnsureDecompressedChunk(raw, ref offset, out isCompressed);
             UnprocessedChunk chunk = new(chunkData);
-            unprocessedChunks.Add(chunk);
+
+            if (firstChunkId == null)
+            {
+                firstChunkId = chunk.id;
+            }
+            else if (!inPrelude && chunk.id == firstChunkId.Value)
+            {
+                inPrelude = true;
+                prelude = new List<Chunk>(mainChunks);
+                mainChunks.Clear();
+            }
+
+            mainChunks.Add(chunk);
         }
 
-//Classify chunks
         chunks = new();
-        foreach(Chunk chunk in unprocessedChunks)
+
+        foreach (Chunk chunk in mainChunks)
         {
-            switch(chunk.type)
+            switch (chunk.type)
             {
                 case Chunk.Type.NORM:
-                    chunks.Add(new NormalChunk(chunk)); break;
-                    
+                    chunks.Add(new NormalChunk(chunk));
+                    break;
+
                 case Chunk.Type.TEXT:
-                    chunks.Add(new TextureChunk(chunk)); break;
-                    
+                    chunks.Add(new TextureChunk(chunk));
+                    break;
+
                 case Chunk.Type.OSND:
-                    chunks.Add(new OldSoundChunk(chunk)); break;
-                    
+                    chunks.Add(new OldSoundChunk(chunk));
+                    break;
+
                 case Chunk.Type.NSND:
-                    chunks.Add(new SoundChunk(chunk)); break;
-                    
+                    chunks.Add(new SoundChunk(chunk));
+                    break;
+
                 case Chunk.Type.WBNK:
-                    chunks.Add(new WavebankChunk(chunk)); break;
+                    chunks.Add(new WavebankChunk(chunk));
+                    break;
 
                 case Chunk.Type.SPCH:
-                    chunks.Add(new SpeechChunk(chunk)); break;    
+                    chunks.Add(new SpeechChunk(chunk));
+                    break;
             }
         }
-Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");
+
+        Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");
+
+        int pageWidth = 512;
+        int pageHeight = 128;
+        int pageCount = chunks.Count(c => c is TextureChunk);
+
+        Texture2D atlas = new Texture2D(pageWidth, pageHeight * pageCount, TextureFormat.R8, false);
+        atlas.filterMode = FilterMode.Point;
+        atlas.wrapMode = TextureWrapMode.Clamp;
+
+        var rawtex = atlas.GetRawTextureData<byte>();
+
+        int texPageID = 0;
+
+        foreach (Chunk chunk in chunks)
+        {
+            if (chunk is not TextureChunk tchunk)
+                continue;
+
+            byte[] data = tchunk.data;
+
+            int baseY = texPageID * pageHeight;
+
+            for (int y = 0; y < pageHeight; y++)
+            {
+                int srcRow = y * pageWidth;
+                int dstRow = (baseY + y) * pageWidth;
+
+                for (int x = 0; x < pageWidth; x++)
+                    rawtex[dstRow + x] = data[srcRow + x];
+            }
+
+            texPageID++;
+        }
+
+        atlas.Apply(false, false);
+        GLOBAL.WGEO_material.SetTexture("_WGEO_Atlas", atlas);
+        GLOBAL.WGEO_material.SetFloat("_PageHeight", pageHeight);
+        GLOBAL.WGEO_material.SetFloat("_PageWidth", pageWidth);
+        GLOBAL.WGEO_material.SetFloat("_PageCount", pageCount);
     }
 
     byte[] EnsureDecompressedChunk(byte[] nsfData, ref int offset, out bool isCompressed)
     {
-        if(nsfData is null)                       throw new ArgumentNullException("nsfData");
-        if(offset < 0 || offset > nsfData.Length) throw new ArgumentOutOfRangeException("offset");
-        if(nsfData.Length < offset + 2)           Debug.LogError("NSF.ReadChunk: Data is too short");
+        if (nsfData is null)
+            throw new ArgumentNullException(nameof(nsfData));
+
+        if (offset < 0 || offset > nsfData.Length)
+            throw new ArgumentOutOfRangeException(nameof(offset));
 
         isCompressed = false;
+
         byte[] extractedRaw = new byte[Chunk.LENGTH];
-        short magic = ConvertBits.FromInt16(nsfData, offset); //First field of chunk
-        if(magic == Chunk.MAGIC)
+        short magic = ConvertBits.FromInt16(nsfData, offset);
+
+        if (magic == Chunk.MAGIC)
         {
             isCompressed = false;
             Array.Copy(nsfData, offset, extractedRaw, 0, Chunk.LENGTH);
             offset += Chunk.LENGTH;
+            return extractedRaw;
         }
-        else if (magic == Chunk.COMP_MAGIC) //Taken decompression from CrashEdit project, placing good faith
+
+        if (magic == Chunk.COMP_MAGIC)
         {
             isCompressed = true;
+
             int pos = 0;
-#region DEBUG
-if (nsfData.Length < offset + 12) Debug.LogError($"Chunk begining at {offset}, of NSF, is too short");
-#endregion
+
             short zero = ConvertBits.FromInt16(nsfData, offset + 2);
             int length = ConvertBits.FromInt32(nsfData, offset + 4);
-            int skip   = ConvertBits.FromInt32(nsfData, offset + 8);
-#region DEBUG
-if (zero != 0) Debug.Log("NSF.ReadChunk: Zero value is wrong");
-if (length < 0 || length > Chunk.LENGTH) Debug.LogError("NSF.ReadChunk: Length field is invalid");
-if (skip < 0) Debug.LogError("NSF.ReadChunk: Skip value is negative");
-#endregion
+            int skip = ConvertBits.FromInt32(nsfData, offset + 8);
+
             offset += 12;
+
             while (pos < length)
             {
-#region DEBUG
-if (nsfData.Length < offset + 1) Debug.LogError("NSF.ReadChunk: Data is too short");
-#endregion
-                byte prefix = nsfData[offset];
-                offset++;
+                byte prefix = nsfData[offset++];
+
                 if ((prefix & 0x80) != 0)
                 {
                     prefix &= 0x7F;
-#region DEBUG
-if (nsfData.Length < offset + 1) Debug.LogError("NSF.ReadChunk: Data is too short");
-#endregion
-                    int seek = nsfData[offset];
-                    offset++;
-                    int span = seek & 7;
-                    seek >>= 3;
+
+                    int seekByte = nsfData[offset++];
+
+                    int span = seekByte & 7;
+                    int seek = seekByte >> 3;
                     seek |= prefix << 5;
-                    if (span == 7)
-                        span = 64;
-                    else
-                        span += 3;
-#region DEBUG
-if (pos - seek < 0) Debug.LogError("NSF.ReadChunk: Repeat begins out of bounds");
-if (pos + span > Chunk.LENGTH) Debug.LogError("NSF.ReadChunk: Repeat ends out of bounds");
-#endregion
-                    // Do NOT use Array.Copy as
-                    // overlap is possible i.e. span
-                    // may be greater than seek
-                    for (int i = 0;i < span;i++)
+
+                    if (span == 7) span = 64;
+                    else span += 3;
+
+                    for (int i = 0; i < span; i++)
                         extractedRaw[pos + i] = extractedRaw[pos - seek + i];
+
                     pos += span;
                 }
                 else
                 {
-#region DEBUG
-if (nsfData.Length < offset + prefix) Debug.LogError("NSF.ReadChunk: Data is too short");
-#endregion
-                    Array.Copy(nsfData, offset, extractedRaw, pos, prefix);
-                    offset += prefix;
-                    pos += prefix;
+                    int len = prefix;
+
+                    Array.Copy(nsfData, offset, extractedRaw, pos, len);
+                    offset += len;
+                    pos += len;
                 }
             }
-#region DEBUG
-if (nsfData.Length < offset + skip) Debug.LogError("NSF.ReadChunk: Data is too short");
-#endregion
+
             offset += skip;
-#region DEBUG
-if (nsfData.Length < offset + (Chunk.LENGTH - length)) Debug.LogError("NSF.ReadChunk: Data is too short");
-#endregion
+
             Array.Copy(nsfData, offset, extractedRaw, pos, Chunk.LENGTH - length);
             offset += (Chunk.LENGTH - length);
+
+            return extractedRaw;
         }
-#region DEBUG
-        else
-Debug.Log("NSF.ReadChunk: Unknown magic number");
-#endregion
 
-        return extractedRaw;
+        throw new Exception("Unknown magic at " + offset);
     }
-
-    
 }

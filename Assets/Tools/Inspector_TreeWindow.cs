@@ -86,6 +86,10 @@ public class NSFInspectorWindow : EditorWindow
         GUILayout.Label(
             "Texture Chunk",
             EditorStyles.boldLabel);
+
+        EditorGUILayout.LabelField(
+            "EID",
+            c.EIDname);
     }
 
     private void DrawEntry(Entry e)

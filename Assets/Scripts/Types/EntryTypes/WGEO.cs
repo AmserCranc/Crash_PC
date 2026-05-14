@@ -58,7 +58,7 @@ public class WGEO : Entry
         verts = new();
         for(int index = 0; index < vertCount; index++)
             verts.Add(new WGEO_vertex(rawVerts, index * WGEO_vertex.DATA_LENGTH));
-
+//DEBUGGING
         PlaceTerrain();
     }
 
@@ -164,51 +164,82 @@ public class WGEO : Entry
 
     public struct WGEO_face
     {
-        public float2x3 UV;
+        public uint2x3 UV;
         public float3x3 verts;
         public Color32 RGBA_0;
         public Color32 RGBA_1;
         public Color32 RGBA_2;
+        public Vector4 meta; //CLUTX, CLUTY, Texpage, blendmode
+        public Vector4 meta1;//ColourMode, BLANK, BLANK, BLANK
     }
 
     public void PlaceTerrain()
     {
-        const uint pageWidth = 512;
-
         List<WGEO_face> faces = new();
-        foreach(WGEO_polygon p in polygons)
+
+        foreach (WGEO_polygon p in polygons)
         {
             WGEO_struct str = GetModelStruct(p.modelstruct);
 
-            if(str is WGEO_textured texFace)
+            if (str is WGEO_textured texFace)
             {
                 WGEO_face f = new();
-                f.UV.c2 = new (texFace.U1 / pageWidth * -1, texFace.V1 / 128);
-                f.UV.c1 = new (texFace.U2 / pageWidth * -1, texFace.V2 / 128);
-                f.UV.c0 = new (texFace.U3 / pageWidth * -1, texFace.V3 / 128);
 
-                f.verts.c2 = new float3((float)(XOff + verts[p.vertA].x) *-1 / WGEO_SCALE, (float)(YOff + verts[p.vertA].y) / WGEO_SCALE, (float)(ZOff + verts[p.vertA].z) / WGEO_SCALE);
-                f.verts.c1 = new float3((float)(XOff + verts[p.vertB].x) *-1 / WGEO_SCALE, (float)(YOff + verts[p.vertB].y) / WGEO_SCALE, (float)(ZOff + verts[p.vertB].z) / WGEO_SCALE);
-                f.verts.c0 = new float3((float)(XOff + verts[p.vertC].x) *-1 / WGEO_SCALE, (float)(YOff + verts[p.vertC].y) / WGEO_SCALE, (float)(ZOff + verts[p.vertC].z) / WGEO_SCALE);
+                f.verts.c0 = new float3(
+                    (float)(XOff + verts[p.vertA].x) * -1 / WGEO_SCALE,
+                    (float)(YOff + verts[p.vertA].y) / WGEO_SCALE,
+                    (float)(ZOff + verts[p.vertA].z) / WGEO_SCALE);
 
-                f.RGBA_0 = new Color32(verts[p.vertA].red, verts[p.vertA].green, verts[p.vertA].blue, 1);
-                f.RGBA_1 = new Color32(verts[p.vertB].red, verts[p.vertB].green, verts[p.vertB].blue, 1); 
-                f.RGBA_2 = new Color32(verts[p.vertC].red, verts[p.vertC].green, verts[p.vertC].blue, 1); 
+                f.verts.c1 = new float3(
+                    (float)(XOff + verts[p.vertB].x) * -1 / WGEO_SCALE,
+                    (float)(YOff + verts[p.vertB].y) / WGEO_SCALE,
+                    (float)(ZOff + verts[p.vertB].z) / WGEO_SCALE);
+
+                f.verts.c2 = new float3(
+                    (float)(XOff + verts[p.vertC].x) * -1 / WGEO_SCALE,
+                    (float)(YOff + verts[p.vertC].y) / WGEO_SCALE,
+                    (float)(ZOff + verts[p.vertC].z) / WGEO_SCALE);
+
+                f.UV.c2 = new uint2((uint)texFace.U1, (uint)texFace.V1 ); // divide x512 y128
+                f.UV.c1 = new uint2((uint)texFace.U2, (uint)texFace.V2 ); // divide x512 y128
+                f.UV.c0 = new uint2((uint)texFace.U3, (uint)texFace.V3 ); // divide x512 y128
+
+                f.RGBA_0 = new Color32(
+                    verts[p.vertA].red,
+                    verts[p.vertA].green,
+                    verts[p.vertA].blue,
+                    255);
+
+                f.RGBA_1 = new Color32(
+                    verts[p.vertB].red,
+                    verts[p.vertB].green,
+                    verts[p.vertB].blue,
+                    255);
+
+                f.RGBA_2 = new Color32(
+                    verts[p.vertC].red,
+                    verts[p.vertC].green,
+                    verts[p.vertC].blue,
+                    255);
+
+                f.meta.x = texFace.ClutX;
+                f.meta.y = texFace.ClutY;
+                f.meta.z = p.page;
+                f.meta.w = texFace.blendMode;
+                f.meta1.x = texFace.colourMode;
 
                 faces.Add(f);
             }
-
         }
-        GameObject go = new();
+
+        GameObject go = new GameObject("WGEO");
+
         MeshFilter mf = go.AddComponent<MeshFilter>();
         MeshRenderer mr = go.AddComponent<MeshRenderer>();
+
         mf.mesh = BuildMesh(faces);
-        Material mat = new Material(Shader.Find("Custom/DisplayNormals"));
-        mr.material = mat;
 
-        
-
-        
+        mr.material = GLOBAL.WGEO_material;
     }
 
     public static Mesh BuildMesh(List<WGEO_face> faces)
@@ -216,16 +247,17 @@ public class WGEO : Entry
         Mesh mesh = new Mesh();
 
         List<Vector3> vertices = new();
-        List<Vector2> uvs      = new();
-        List<Color32> colors   = new();
-        List<int> triangles    = new();
+        List<Vector2> uvs = new();
+        List<Vector4> uvMeta = new();
+        List<Color32> colors = new();
+        List<int> triangles = new();
 
         int index = 0;
 
         foreach (WGEO_face face in faces)
         {
             //
-            // Positions
+            // VERTICES
             //
 
             vertices.Add(new Vector3(
@@ -260,7 +292,15 @@ public class WGEO : Entry
                 face.UV.c2.y));
 
             //
-            // Colors
+            // META
+            //
+
+            uvMeta.Add(face.meta);
+            uvMeta.Add(face.meta);
+            uvMeta.Add(face.meta);
+
+            //
+            // COLOURS
             //
 
             colors.Add(face.RGBA_0);
@@ -268,7 +308,7 @@ public class WGEO : Entry
             colors.Add(face.RGBA_2);
 
             //
-            // Triangle indices
+            // TRIANGLES
             //
 
             triangles.Add(index + 0);
@@ -278,14 +318,15 @@ public class WGEO : Entry
             index += 3;
         }
 
-        //
-        // Upload
-        //
-
         mesh.SetVertices(vertices);
+
         mesh.SetUVs(0, uvs);
+        mesh.SetUVs(1, uvMeta);
+
         mesh.SetColors(colors);
+
         mesh.SetTriangles(triangles, 0);
+
         mesh.RecalculateBounds();
         mesh.RecalculateNormals();
 

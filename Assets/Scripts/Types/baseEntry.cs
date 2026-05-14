@@ -46,6 +46,7 @@ unsafe public class Entry
     public int id               => ConvertBits.FromInt32(raw, pID);
     public Type type            => (Type)ConvertBits.FromInt16(raw, pTYPE);
     public int itemCount        => ConvertBits.FromInt32(raw, pITEM_COUNT);
+    public string EIDname       => EIDToEName(id);
 
     readonly public int size;
   
@@ -129,5 +130,18 @@ unsafe public class Entry
     virtual public void DrawToTreeView(NSFInspectorWindow n)
     {
         
+    }
+
+    public static string EIDToEName(int eid)
+    {
+        const string ENameCharacterSet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!";
+        char[] str = new char[5];
+        eid >>= 1;
+        for (int i = 0; i < 5; i++)
+        {
+            str[4 - i] = ENameCharacterSet[eid & 0x3F];
+            eid >>= 6;
+        }
+        return new string(str);
     }
 }
