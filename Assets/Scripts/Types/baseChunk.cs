@@ -48,6 +48,7 @@ unsafe public class Chunk
     public Color  disp       => displayColour[type];
     public int    entryCount => ConvertBits.FromInt32(raw, pENTRY_COUNT);
     public int    magic      => ConvertBits.FromInt16(raw, pMAGIC);
+    public string EIDname    => EIDToEName(id);
 
     public Chunk(byte[] _data)
     {
@@ -73,5 +74,18 @@ unsafe public class Chunk
             ConvertBits.FromInt32(raw, entryOffsetEnd));
 
 
+    }
+
+    public static string EIDToEName(int eid)
+    {
+        const string ENameCharacterSet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!";
+        char[] str = new char[5];
+        eid >>= 1;
+        for (int i = 0; i < 5; i++)
+        {
+            str[4 - i] = ENameCharacterSet[eid & 0x3F];
+            eid >>= 6;
+        }
+        return new string(str);
     }
 }

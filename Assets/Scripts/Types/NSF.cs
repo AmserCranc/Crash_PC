@@ -13,9 +13,11 @@ public class NSF
     {
         Debug.Log("New NSF");
 
-        
+        GLOBAL.texEIDMap = new();
         GLOBAL.WGEO_material = new Material(Shader.Find("Custom/WGEO_PS1"));
         GLOBAL.HUD = new Material(Shader.Find("Custom/WGEO_PS1"));
+        GLOBAL.DEMO = new Material(Shader.Find("Custom/WGEO_PS1"));
+
 
         byte[] raw;
         using (FileStream fs = new FileStream(streamPath, FileMode.Open, FileAccess.Read))
@@ -83,7 +85,6 @@ public class NSF
             }
         }
 
-        Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");
 
         int pageWidth = 512;
         int pageHeight = 128;
@@ -95,7 +96,7 @@ public class NSF
 
         var rawtex = atlas.GetRawTextureData<byte>();
 
-        int texPageID = 0;
+        int texPageIndex = 0;
 
         foreach (Chunk chunk in chunks)
         {
@@ -104,7 +105,7 @@ public class NSF
 
             byte[] data = tchunk.data;
 
-            int baseY = texPageID * pageHeight;
+            int baseY = texPageIndex * pageHeight;
 
             for (int y = 0; y < pageHeight; y++)
             {
@@ -115,14 +116,52 @@ public class NSF
                     rawtex[dstRow + x] = data[srcRow + x];
             }
 
-            texPageID++;
+            
+            GLOBAL.texEIDMap.Add(tchunk.eid, texPageIndex);
+Debug.Log($"Chunk {tchunk.EIDname} with ID: {tchunk.eid} placed at index {texPageIndex}");
+            texPageIndex++;
         }
+Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");
 
         atlas.Apply(false, false);
         GLOBAL.WGEO_material.SetTexture("_WGEO_Atlas", atlas);
         GLOBAL.WGEO_material.SetFloat("_PageHeight", pageHeight);
         GLOBAL.WGEO_material.SetFloat("_PageWidth", pageWidth);
         GLOBAL.WGEO_material.SetFloat("_PageCount", pageCount);
+        GLOBAL.WGEO_material.SetInt("_Page0_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(0));
+        GLOBAL.WGEO_material.SetInt("_Page1_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(1));
+        GLOBAL.WGEO_material.SetInt("_Page2_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(2));
+        GLOBAL.WGEO_material.SetInt("_Page3_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(3));
+        GLOBAL.WGEO_material.SetInt("_Page4_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(4));
+        GLOBAL.WGEO_material.SetInt("_Page5_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(5));
+        GLOBAL.WGEO_material.SetInt("_Page6_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(6));
+        GLOBAL.WGEO_material.SetInt("_Page7_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(7));
+        GLOBAL.WGEO_material.SetInt("_Page8_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(8));
+    }
+
+    void ExtractTexPage(Material mat, TextureChunk tchunk)
+    {
+        byte[] data = tchunk.data;
+
+        Texture2D page = new Texture2D(512, 128, TextureFormat.R8, false, true);
+        page.filterMode = FilterMode.Point;
+        page.wrapMode = TextureWrapMode.Clamp;
+        page.ignoreMipmapLimit = true;
+        var rawtex = page.GetRawTextureData<byte>();
+
+        for (int y = 0; y < 128; y++)
+        {
+            int row = y * 512;
+
+            for (int x = 0; x < 512; x++)
+                rawtex[row + x] = data[row + x];
+        }
+
+        page.Apply(false, false);
+        mat.SetTexture ("_WGEO_Atlas", page);
+        mat.SetFloat   ("_PageHeight", 128);
+        mat.SetFloat   ("_PageWidth",  512);
+        mat.SetFloat   ("_PageCount",  1);
     }
 
     byte[] EnsureDecompressedChunk(byte[] nsfData, ref int offset, out bool isCompressed)

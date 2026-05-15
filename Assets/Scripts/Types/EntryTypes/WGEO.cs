@@ -6,6 +6,7 @@ using Unity.Mathematics;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Linq;
+using Unity.VisualScripting;
 
 public class WGEO : Entry
 {
@@ -45,6 +46,7 @@ public class WGEO : Entry
 
     public List<WGEO_polygon> polygons;
     public List<WGEO_vertex> verts;
+    //public List<WGEO_struct> structs;
 
 
     public WGEO(Entry _entry) : base(_entry.data)
@@ -58,9 +60,14 @@ public class WGEO : Entry
         verts = new();
         for(int index = 0; index < vertCount; index++)
             verts.Add(new WGEO_vertex(rawVerts, index * WGEO_vertex.DATA_LENGTH));
+        
+
+
 //DEBUGGING
         PlaceTerrain();
     }
+
+    
 
     public WGEO_struct GetModelStruct(int _index)
     {
@@ -125,6 +132,7 @@ public class WGEO : Entry
         public byte segment     => (byte) (texInfo >> 18  & 0b0011);
         public byte xOffsetU    => (byte) (texInfo >> 13  & 0b0001_1111);
         public byte yOffsetU    => (byte) (texInfo        & 0b0001_1111);
+        
 
         public int  w           => 4 <<  (UVindex % 5);
         public int  h           => 4 << ((UVindex / 5) % 5);
@@ -224,9 +232,10 @@ public class WGEO : Entry
 
                 f.meta.x = texFace.ClutX;
                 f.meta.y = texFace.ClutY;
-                f.meta.z = p.page;
+                f.meta.z = GetTPage(p.page);
                 f.meta.w = texFace.blendMode;
                 f.meta1.x = texFace.colourMode;
+                Debug.Log(texFace.colourMode);
 
                 faces.Add(f);
             }
@@ -249,6 +258,7 @@ public class WGEO : Entry
         List<Vector3> vertices = new();
         List<Vector2> uvs = new();
         List<Vector4> uvMeta = new();
+        List<Vector4> uvMeta1 = new();
         List<Color32> colors = new();
         List<int> triangles = new();
 
@@ -299,6 +309,10 @@ public class WGEO : Entry
             uvMeta.Add(face.meta);
             uvMeta.Add(face.meta);
 
+            uvMeta1.Add(face.meta1);
+            uvMeta1.Add(face.meta1);
+            uvMeta1.Add(face.meta1);
+
             //
             // COLOURS
             //
@@ -322,6 +336,7 @@ public class WGEO : Entry
 
         mesh.SetUVs(0, uvs);
         mesh.SetUVs(1, uvMeta);
+        mesh.SetUVs(2, uvMeta1);
 
         mesh.SetColors(colors);
 
