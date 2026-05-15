@@ -7,6 +7,7 @@ Shader "Custom/WGEO_PS1"
         _PageCount("Page Count", Float) = 1
         _PageWidth("Page Width", Float) = 512
         _PageHeight("Page Height", Float) = 128
+        _VertColourIntensity("Vert colour intensity", Range(0, 2)) = 1
 
         _DEBUG_pageOffset("Debug Page Offset", Int) = 0
         _DEBUG_CLUTxOffset("Debug CLUT x Offset", Int) = 0
@@ -47,6 +48,12 @@ Shader "Custom/WGEO_PS1"
             float _PageCount;
             float _PageWidth;
             float _PageHeight;
+            float _VertColourIntensity;
+
+            static const float _8_5_lookup[32] =
+            {
+                0 ,9 ,17 ,25 ,33 ,42 ,50 ,58 ,66 ,75 ,83 ,91 ,99 ,107 ,116 ,124 ,132 ,140 ,149 ,157 ,165 ,173 ,181 ,190 ,198 ,206 ,214 ,223 ,231 ,239 ,247 ,255 
+            };
 
             int _DEBUG_pageOffset;
             int _DEBUG_CLUTxOffset;
@@ -129,19 +136,30 @@ Shader "Custom/WGEO_PS1"
                 int px = p.x;
                 int py = p.y;
 
+                // if (colourMode == 0)
+                // {
+                //     int byteX = px >> 1;
+                //     uint b = ReadByte(byteX, py, page);
+
+                //     return (px & 1)
+                //         ? ((b >> 4) & 0x0F)
+                //         : (b & 0x0F);
+                // }
+
                 if (colourMode == 0)
                 {
-                    int byteX = px >> 1;
-                    uint b = ReadByte(byteX, py, page);
+                    bool isHighNibble = (p.x % 2) == 0;
+                    uint pxByte = ReadByte(p.x/2, p.y, page);
 
-                    return (px & 1)
-                        ? ((b >> 4) & 0x0F)
-                        : (b & 0x0F);
+                    return !isHighNibble
+                            ? (pxByte >> 4) & 0x0F
+                            : pxByte & 0x0F;
                 }
 
                 if (colourMode == 1)
                 {
                     return ReadByte(px, py, page);
+
                 }
 
                 int byteX = px << 1;
@@ -151,35 +169,68 @@ Shader "Custom/WGEO_PS1"
                 return lo | (hi << 8);
             }
 
-uint ReadCLUT(uint index, int clutX, int clutY, int page, int colourMode)
-{
-    int baseY = clutY + _DEBUG_CLUTyOffset;
+            uint ReadCLUT(uint index, int clutX, int clutY, int page, int colourMode)
+            {
+                int baseY = clutY + _DEBUG_CLUTyOffset;
 
-    int byteX;
+                int byteX;
 
-    if (colourMode == 1) // 8bpp
-    {
-        // FULL palette index, no CLUTX windowing
-        byteX = ((int)index) << 1;
-    }
-    else // 4bpp
-    {
-        int baseX = clutX + _DEBUG_CLUTxOffset;
-        byteX = (baseX + ((int)index)) << 1;
-    }
+                if (colourMode == 1) // 8bpp
+                {
+                    byteX = ((int)index) << 1;
+                }
+                // else // 4bpp
+                // {
+                //     int baseX = clutX + _DEBUG_CLUTxOffset;
+                //     byteX = (baseX + ((int)index)) << 1;
+                // }
+                if(colourMode == 0)
+                {
+                    int paletteRow = clutY;
+                    int subPaletteIndex = clutX * 16;
+                    int paletteEntryIndex = subPaletteIndex + index;
+                    int byte2Index = paletteEntryIndex * 2;
+                    byteX = byte2Index;
 
-    uint lo = ReadByte(byteX, baseY, page);
-    uint hi = ReadByte(byteX + 1, baseY, page);
+                }
 
-    return lo | (hi << 8);
-}
+                uint lo = ReadByte(byteX, baseY, page);
+                uint hi = ReadByte(byteX + 1, baseY, page);
+                
+                return (hi << 8) | lo;
 
-            float4 Decode5551(uint c)
+            }
+
+            float4 Decode5551(uint c, int blendMode)
             {
                 float r = ((c >> 0)  & 31) / 31.0;
                 float g = ((c >> 5)  & 31) / 31.0;
                 float b = ((c >> 10) & 31) / 31.0;
-                float a = ((c >> 15) & 1) ? 1.0 : 0.0;
+
+                uint aBit = (c >> 15) & 1;
+                float hasColor = (r > 0.0 || g > 0.0 || b > 0.0) ? 1.0 : 0.0;
+
+                float a;
+
+                switch (blendMode)
+                {
+                    case 0:
+                        // 127 if alpha bit set, else 1/0 depending on color presence
+                        a = (aBit == 1)
+                            ? (127.0 / 255.0)
+                            : hasColor;
+                        break;
+
+                    case 1:
+                    case 2:
+                    case 3:
+                    default:
+                        // 255 if alpha bit set OR any color exists, else 0
+                        a = (aBit == 1 || hasColor > 0.0)
+                            ? 1.0
+                            : 0.0;
+                        break;
+                }
 
                 return float4(r, g, b, a);
             }
@@ -210,6 +261,11 @@ uint ReadCLUT(uint index, int clutX, int clutY, int page, int colourMode)
                 }
             }
 
+            float4 DEBUG_AlphaClip(float4 colour)
+            {
+                return float4(colour.a, 0, 0, 1);
+            }
+
             fixed4 frag(v2f i) : SV_Target
             {
                 int colourMode = (int)i.meta1.x;
@@ -236,9 +292,12 @@ uint ReadCLUT(uint index, int clutX, int clutY, int page, int colourMode)
                     colour = value;
                 }
 
-                //float4 finalCol = Decode5551(colour);
-                float4 finalCol = Decode5551(colour);
-                finalCol.rgb *= i.col.rgb;
+                float4 finalCol = Decode5551(colour, i.meta.w);
+
+                clip(finalCol.a - 0.5);
+
+                finalCol.rgb *= i.col.rgb * _VertColourIntensity;
+                
 
                 switch (_DEBUG_MODE)
                 {
@@ -248,6 +307,7 @@ uint ReadCLUT(uint index, int clutX, int clutY, int page, int colourMode)
                     case 3: return DEBUG_ColourMode(i.meta1.x);
                     case 4: return DEBUG_CLUTMode(i.meta.x);
                     case 5: return DEBUG_CLUTMode(i.meta.y);
+                    case 6: return DEBUG_AlphaClip(Decode5551(colour, i.meta.w));
                 }
 
                 return fixed4(1, 0, 1, 1);
