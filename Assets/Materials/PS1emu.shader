@@ -9,13 +9,14 @@ Shader "Custom/WGEO_PS1"
         _PageHeight("Page Height", Float) = 128
         _VertColourIntensity("Vert colour intensity", Range(0, 2)) = 1
 
+        _Contrast("Contrast", Range(0, 2)) = 1
+
         _DEBUG_pageOffset("Debug Page Offset", Int) = 0
         _DEBUG_CLUTxOffset("Debug CLUT x Offset", Int) = 0
         _DEBUG_CLUTyOffset("Debug CLUT y Offset", Int) = 0
         _DEBUG_MODE("Norm, Page, UVs, cMod, CLUTx, CLUTy", Int) = 0
         _DEBUG_Tinyoffset ("tiny offset", float) = 0
 
-        //hide
         _Page0_EID("p0", Int) = 0
         _Page1_EID("p1", Int) = 0
         _Page2_EID("p2", Int) = 0
@@ -49,6 +50,7 @@ Shader "Custom/WGEO_PS1"
             float _PageWidth;
             float _PageHeight;
             float _VertColourIntensity;
+            float _Contrast;
 
             static const float _8_5_lookup[32] =
             {
@@ -63,7 +65,7 @@ Shader "Custom/WGEO_PS1"
 
             int _Page0_EID;
             int _Page1_EID;
-            int _Page2_EID; 
+            int _Page2_EID;
             int _Page3_EID;
             int _Page4_EID;
             int _Page5_EID;
@@ -75,10 +77,8 @@ Shader "Custom/WGEO_PS1"
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
-
                 float4 meta  : TEXCOORD1;
                 float4 meta1 : TEXCOORD2;
-
                 fixed4 color : COLOR;
             };
 
@@ -114,7 +114,7 @@ Shader "Custom/WGEO_PS1"
                 if (eid == _Page7_EID) return 7;
                 if (eid == _Page8_EID) return 8;
 
-                return 0; 
+                return 0;
             }
 
             uint ReadByte(int x, int y, int page)
@@ -130,21 +130,24 @@ Shader "Custom/WGEO_PS1"
                 return (uint)(v * 255.0);
             }
 
+            uint ReadByteReversed(int x, int y, int page)
+            {
+                float atlasX = x + 0.5;
+                float atlasY = y + (page + _DEBUG_pageOffset) * _PageHeight + 0.5;
+
+                float2 uv;
+                uv.x = atlasX / _PageWidth;
+                uv.y = atlasY / (_PageHeight * _PageCount);
+
+                float v = tex2D(_WGEO_Atlas, uv).r;
+                return (v * 255.0);
+            }
+
             uint ReadIndex(float2 uv, int colourMode, int page)
             {
                 int2 p = int2((uv));
                 int px = p.x;
                 int py = p.y;
-
-                // if (colourMode == 0)
-                // {
-                //     int byteX = px >> 1;
-                //     uint b = ReadByte(byteX, py, page);
-
-                //     return (px & 1)
-                //         ? ((b >> 4) & 0x0F)
-                //         : (b & 0x0F);
-                // }
 
                 if (colourMode == 0)
                 {
@@ -159,7 +162,6 @@ Shader "Custom/WGEO_PS1"
                 if (colourMode == 1)
                 {
                     return ReadByte(px, py, page);
-
                 }
 
                 int byteX = px << 1;
@@ -169,43 +171,38 @@ Shader "Custom/WGEO_PS1"
                 return lo | (hi << 8);
             }
 
+
+
             uint ReadCLUT(uint index, int clutX, int clutY, int page, int colourMode)
             {
                 int baseY = clutY + _DEBUG_CLUTyOffset;
-
                 int byteX;
 
-                if (colourMode == 1) // 8bpp
+                if (colourMode == 1)
                 {
                     byteX = ((int)index) << 1;
                 }
-                // else // 4bpp
-                // {
-                //     int baseX = clutX + _DEBUG_CLUTxOffset;
-                //     byteX = (baseX + ((int)index)) << 1;
-                // }
-                if(colourMode == 0)
+
+                if (colourMode == 0)
                 {
                     int paletteRow = clutY;
                     int subPaletteIndex = clutX * 16;
                     int paletteEntryIndex = subPaletteIndex + index;
                     int byte2Index = paletteEntryIndex * 2;
                     byteX = byte2Index;
-
                 }
 
-                uint lo = ReadByte(byteX, baseY, page);
-                uint hi = ReadByte(byteX + 1, baseY, page);
-                
-                return (hi << 8) | lo;
+                uint lo = ReadByte(byteX +0, baseY, page);
+                uint hi = ReadByte(byteX +1, baseY, page);
 
+                return (hi << 8) | lo;
             }
 
             float4 Decode5551(uint c, int blendMode)
             {
-                float r = ((c >> 0)  & 31) / 31.0;
-                float g = ((c >> 5)  & 31) / 31.0;
-                float b = ((c >> 10) & 31) / 31.0;
+                float r = _8_5_lookup[(c >> 0)  & 31] / 255.0;
+                float g = _8_5_lookup[(c >> 5)  & 31] / 255.0;
+                float b = _8_5_lookup[(c >> 10) & 31] / 255.0;
 
                 uint aBit = (c >> 15) & 1;
                 float hasColor = (r > 0.0 || g > 0.0 || b > 0.0) ? 1.0 : 0.0;
@@ -215,17 +212,12 @@ Shader "Custom/WGEO_PS1"
                 switch (blendMode)
                 {
                     case 0:
-                        // 127 if alpha bit set, else 1/0 depending on color presence
                         a = (aBit == 1)
                             ? (127.0 / 255.0)
                             : hasColor;
                         break;
 
-                    case 1:
-                    case 2:
-                    case 3:
                     default:
-                        // 255 if alpha bit set OR any color exists, else 0
                         a = (aBit == 1 || hasColor > 0.0)
                             ? 1.0
                             : 0.0;
@@ -235,36 +227,43 @@ Shader "Custom/WGEO_PS1"
                 return float4(r, g, b, a);
             }
 
-            float4 DEBUG_ColourMode(int mode)
+            float3 ApplyContrast(float3 color, float contrast)
             {
-                switch(mode)
+                return (color - 0.5) * contrast + 0.5;
+            }
+            
+            float4 DEBUGRawTextures(v2f i)
+            {
+                int colourMode = (int)i.meta1.x;
+                int eid = (int)i.meta.z;
+                int page = ResolvePage(eid);
+                uint value = ReadIndex(i.uv, colourMode, page);
+
+                uint colour;
+                if (colourMode < 2)
                 {
-                    case 0: return fixed4(1, 0, 0, 1);
-                    case 1: return fixed4(0, 1, 0, 1);
-                    case 2: return fixed4(0, 0, 1, 1);
-                    default: return fixed4(1, 0, 1, 1);
+                    colour = ReadCLUT(
+                        value,
+                        (int)i.meta.x,
+                        (int)i.meta.y,
+                        page,
+                        (int)i.meta1.x
+                    );
                 }
+                else
+                {
+                    colour = value;
+                }
+
+                float4 finalCol = Decode5551(colour, i.meta.w);
+                //finalCol = float4(LinearToSRGB(finalCol).rgb, finalCol.a);
+
+                clip(finalCol.a - 0.5);
+
+                return finalCol;
+
             }
 
-            float4 DEBUG_CLUTMode(int mode)
-            {
-                switch(mode)
-                {
-                    case 0: return fixed4(1, 0, 0, 1);
-                    case 1: return fixed4(0, 1, 0, 1);
-                    case 2: return fixed4(0, 0, 1, 1);
-                    case 3: return fixed4(1, 0, 1, 1);
-                    case 4: return fixed4(1, 1, 0, 1);
-                    case 5: return fixed4(0, 1, 1, 1);
-                    case 6: return fixed4(0, 0, 0, 1);
-                    default: return fixed4(1, 1, 1, 1);
-                }
-            }
-
-            float4 DEBUG_AlphaClip(float4 colour)
-            {
-                return float4(colour.a, 0, 0, 1);
-            }
 
             fixed4 frag(v2f i) : SV_Target
             {
@@ -293,21 +292,24 @@ Shader "Custom/WGEO_PS1"
                 }
 
                 float4 finalCol = Decode5551(colour, i.meta.w);
+                //finalCol = float4(LinearToSRGB(finalCol).rgb, finalCol.a);
 
                 clip(finalCol.a - 0.5);
 
+                // finalCol.rgb = ApplyContrast(finalCol.rgb, _Contrast);
                 finalCol.rgb *= i.col.rgb * _VertColourIntensity;
-                
+
+
 
                 switch (_DEBUG_MODE)
                 {
                     case 0: return finalCol;
-                    case 1: return fixed4(ResolvePage(eid) / 8,0,0,1);
+                    case 1: return fixed4(ResolvePage(eid),0,0,1);
                     case 2: return fixed4(i.uv.x / _PageWidth, i.uv.y / _PageHeight, 0, 1);
-                    case 3: return DEBUG_ColourMode(i.meta1.x);
-                    case 4: return DEBUG_CLUTMode(i.meta.x);
-                    case 5: return DEBUG_CLUTMode(i.meta.y);
-                    case 6: return DEBUG_AlphaClip(Decode5551(colour, i.meta.w));
+                    case 3: return fixed4(DEBUGRawTextures(i));
+                    case 4: return fixed4(0,1,0,1);
+                    case 5: return fixed4(0,0,1,1);
+                    case 6: return fixed4(finalCol.a,0,0,1);
                 }
 
                 return fixed4(1, 0, 1, 1);

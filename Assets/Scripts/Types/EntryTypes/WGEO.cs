@@ -216,19 +216,19 @@ public class WGEO : Entry
                     verts[p.vertA].red,
                     verts[p.vertA].green,
                     verts[p.vertA].blue,
-                    255);
+                    1);
 
                 f.RGBA_1 = new Color32(
                     verts[p.vertB].red,
                     verts[p.vertB].green,
                     verts[p.vertB].blue,
-                    255);
+                    1);
 
                 f.RGBA_2 = new Color32(
                     verts[p.vertC].red,
                     verts[p.vertC].green,
                     verts[p.vertC].blue,
-                    255);
+                    1);
 
                 f.meta.x = texFace.ClutX;
                 f.meta.y = texFace.ClutY;

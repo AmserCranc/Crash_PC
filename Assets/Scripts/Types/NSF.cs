@@ -90,7 +90,7 @@ public class NSF
         int pageHeight = 128;
         int pageCount = chunks.Count(c => c is TextureChunk);
 
-        Texture2D atlas = new Texture2D(pageWidth, pageHeight * pageCount, TextureFormat.R8, false);
+        Texture2D atlas = new Texture2D(pageWidth, pageHeight * pageCount, TextureFormat.R8, false, true);
         atlas.filterMode = FilterMode.Point;
         atlas.wrapMode = TextureWrapMode.Clamp;
 

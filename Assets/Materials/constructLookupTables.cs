@@ -39,8 +39,8 @@ public class PixelConv : MonoBehaviour
 
     public static int Convert5551_8888(short p, int mode)
     {
-        byte b = colorTableInverse[p & 0x1F];
-        byte b2 = colorTableInverse[(p >> 5) & 0x1F];
+        byte b  = colorTableInverse[ p        & 0x1F];
+        byte b2 = colorTableInverse[(p >> 5)  & 0x1F];
         byte b3 = colorTableInverse[(p >> 10) & 0x1F];
         byte b4 = (byte)((p >> 15) & 1);
         switch (mode)
