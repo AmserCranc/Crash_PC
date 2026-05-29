@@ -25,7 +25,7 @@ public class NSF
             raw = new byte[fs.Length];
             fs.Read(raw, 0, raw.Length);
         }
-
+#region Process Chunks
         List<Chunk> mainChunks = new();
         int offset = 0;
 
@@ -84,8 +84,8 @@ public class NSF
                     break;
             }
         }
-
-
+#endregion
+#region Process Textures
         int pageWidth = 512;
         int pageHeight = 128;
         int pageCount = chunks.Count(c => c is TextureChunk);
@@ -118,10 +118,10 @@ public class NSF
 
             
             GLOBAL.texEIDMap.Add(tchunk.eid, texPageIndex);
-Debug.Log($"Chunk {tchunk.EIDname} with ID: {tchunk.eid} placed at index {texPageIndex}");
+//Debug.Log($"Chunk {tchunk.EIDname} with ID: {tchunk.eid} placed at index {texPageIndex}");
             texPageIndex++;
         }
-Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");
+//Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");
 
         atlas.Apply(false, false);
         GLOBAL.WGEO_material.SetTexture("_WGEO_Atlas", atlas);
@@ -137,8 +137,16 @@ Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");
         GLOBAL.WGEO_material.SetInt("_Page6_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(6));
         GLOBAL.WGEO_material.SetInt("_Page7_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(7));
         GLOBAL.WGEO_material.SetInt("_Page8_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(8));
+#endregion
+
+
+
+
     }
 
+
+
+#region Helpers
     void ExtractTexPage(Material mat, TextureChunk tchunk)
     {
         byte[] data = tchunk.data;
@@ -239,4 +247,8 @@ Debug.Log($"{chunks.Count} chunks in NSF {streamPath}");
 
         throw new Exception("Unknown magic at " + offset);
     }
+
+
+#endregion
+
 }

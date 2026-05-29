@@ -49,7 +49,6 @@ public class NSD
     public int UNK_4                   => ConvertBits.FromInt32(raw, idxAfterHashTable + PROPERTY_SIZE * 4);
     
 
-
     public NSD(string streamPath)
     {
         using FileStream fs = new FileStream(streamPath, FileMode.Open, FileAccess.Read);

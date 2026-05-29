@@ -88,4 +88,12 @@ unsafe public class Chunk
         }
         return new string(str);
     }
+
+    // public Entry GetEntryByEID(int eid)
+    // {
+    //     for(int i = 0; i < entryCount; i++)
+    //     {
+    //         byte[] data = ExtractEntry()
+    //     }
+    // }
 }

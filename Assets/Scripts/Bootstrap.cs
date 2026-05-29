@@ -1,11 +1,18 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using LID = System.UInt32;
 
-public class Bootstrap : MonoBehaviour
+unsafe public class Bootstrap : MonoBehaviour
 {
+    public const string
+        FILE_BASE     = "s00000";
+
+    public const LID
+        LID_BOOTLEVEL = 15;
+
+
     public GameObject chunkDisplay;
-    public string levelID;
     public string streamLocation = "Assets/Streams/";
 
     public NSD levelHeader;
@@ -13,9 +20,7 @@ public class Bootstrap : MonoBehaviour
 
     void Start()
     {
-        Debug.Log($"Attempting load at {levelID}");
-        levelHeader = new($"{streamLocation}{levelID}.nsd");
-        levelData = new($"{streamLocation}{levelID}.nsf");
+        LoadLevel(LID_BOOTLEVEL);
 
 #region Chunk Visualiser
         List<Color> blocks = new();
@@ -25,5 +30,16 @@ public class Bootstrap : MonoBehaviour
         this.GetComponent<MeshRenderer>().material.SetInt("_ColourCount", blocks.Count);
         this.GetComponent<MeshRenderer>().material.SetColorArray("_Colours", blocks);
 #endregion
+    
+    }
+
+    void LoadLevel(LID level)
+    {
+        Debug.Log($"Attempting load {FILE_BASE}{level}");
+        levelHeader = new($"{streamLocation}{FILE_BASE}{level}.nsd");
+        levelData   = new($"{streamLocation}{FILE_BASE}{level}.nsf");
+
+        // tNS nsStruct = new();
+        // NS.Init(nsStruct, level);
     }
 }

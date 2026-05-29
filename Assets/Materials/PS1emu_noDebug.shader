@@ -130,19 +130,6 @@ Shader "Custom/WGEO_PS1"
                 return (uint)(v * 255.0);
             }
 
-            uint ReadByteReversed(int x, int y, int page)
-            {
-                float atlasX = x + 0.5;
-                float atlasY = y + (page + _DEBUG_pageOffset) * _PageHeight + 0.5;
-
-                float2 uv;
-                uv.x = atlasX / _PageWidth;
-                uv.y = atlasY / (_PageHeight * _PageCount);
-
-                float v = tex2D(_WGEO_Atlas, uv).r;
-                return (v * 255.0);
-            }
-
             uint ReadIndex(float2 uv, int colourMode, int page)
             {
                 int2 p = int2((uv));
@@ -231,49 +218,14 @@ Shader "Custom/WGEO_PS1"
             {
                 return (color - 0.5) * contrast + 0.5;
             }
-            
-            float4 DEBUGRawTextures(v2f i)
-            {
-                int colourMode = (int)i.meta1.x;
-                int eid = (int)i.meta.z;
-                int page = ResolvePage(eid);
-                uint value = ReadIndex(i.uv, colourMode, page);
-
-                uint colour;
-                if (colourMode < 2)
-                {
-                    colour = ReadCLUT(
-                        value,
-                        (int)i.meta.x,
-                        (int)i.meta.y,
-                        page,
-                        (int)i.meta1.x
-                    );
-                }
-                else
-                {
-                    colour = value;
-                }
-
-                float4 finalCol = Decode5551(colour, i.meta.w);
-                //finalCol = float4(LinearToSRGB(finalCol).rgb, finalCol.a);
-
-                clip(finalCol.a - 0.5);
-
-                return finalCol;
-
-            }
 
 
             fixed4 frag(v2f i) : SV_Target
             {
                 int colourMode = (int)i.meta1.x;
                 int eid = (int)i.meta.z;
-
                 int page = ResolvePage(eid);
-
                 uint value = ReadIndex(i.uv, colourMode, page);
-
                 uint colour;
 
                 if (colourMode < 2)
@@ -292,28 +244,10 @@ Shader "Custom/WGEO_PS1"
                 }
 
                 float4 finalCol = Decode5551(colour, i.meta.w);
-                //finalCol = float4(LinearToSRGB(finalCol).rgb, finalCol.a);
-
                 clip(finalCol.a - 0.5);
-
-                //finalCol.rgb = ApplyContrast(finalCol.rgb, _Contrast);
                 finalCol.rgb *= i.col.rgb * _VertColourIntensity;
 
-
-
-                switch (_DEBUG_MODE)
-                {
-                    case 0: return finalCol;
-                    case 1: return fixed4(ResolvePage(eid),0,0,1);
-                    case 2: return fixed4(i.uv.x / _PageWidth, i.uv.y / _PageHeight, 0, 1);
-                    case 3: return fixed4(DEBUGRawTextures(i));
-                    case 4: return fixed4(0,1,0,1);
-                    case 5: return fixed4(0,0,1,1);
-                    case 6: return fixed4(finalCol.a,0,0,1);
-                    default: return fixed4(1, 0, 1, 1);
-                }
-
-                //return fixed4(1, 0, 1, 1);
+                return fixed4(1, 0, 1, 1);
             }
 
             ENDCG
