@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using EID = System.UInt32;
 
 public class NormalChunk : Chunk
 {
-    public List<Entry> entries;
+    public Dictionary<EID, Entry> entries;
 
     public NormalChunk(Chunk _chunk) : base(_chunk.data)
     {
-        entries = new List<Entry>();
+        entries = new Dictionary<EID, Entry>();
     
         List<Entry> unprocessedEntries = new List<Entry>();
         for(int entry = 0; entry < entryCount; entry++)
@@ -20,6 +21,6 @@ public class NormalChunk : Chunk
         }
 
         foreach(Entry e in unprocessedEntries)
-            entries.Add(e.Classify());
+            entries.Add(e.id, e.Classify());
     }
 }

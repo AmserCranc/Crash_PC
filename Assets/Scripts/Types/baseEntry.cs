@@ -43,12 +43,13 @@ unsafe public class Entry
 
     public byte[] data          => raw;
     public int magic            => ConvertBits.FromInt32(raw, pMAGIC);
-    public int id               => ConvertBits.FromInt32(raw, pID);
+    public uint id              => (uint)ConvertBits.FromInt32(raw, pID);
     public Type type            => (Type)ConvertBits.FromInt16(raw, pTYPE);
     public int itemCount        => ConvertBits.FromInt32(raw, pITEM_COUNT);
     public string EIDname       => EIDToEName(id);
 
     readonly public int size;
+    readonly public Chunk parent;
   
 
     public Entry(byte[] _data)
@@ -67,7 +68,7 @@ unsafe public class Entry
             case Type.WGEO: return new WGEO(this);
             case Type.SLST: return new SLST(this);
             case Type.TPAG: return new TPAG(this);
-            case Type.LDAT: return new LDAT(this);
+            case Type.LDAT: return new LDAT(this, (NormalChunk)parent);
             case Type.ZDAT: return new ZDAT(this);
             case Type.GOOL: return new GOOL(this);
             case Type.ADIO: return new ADIO(this);
@@ -132,14 +133,14 @@ unsafe public class Entry
         
     }
 
-    public static string EIDToEName(int eid)
+    public static string EIDToEName(uint eid)
     {
         const string ENameCharacterSet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!";
         char[] str = new char[5];
         eid >>= 1;
         for (int i = 0; i < 5; i++)
         {
-            str[4 - i] = ENameCharacterSet[eid & 0x3F];
+            str[4 - i] = ENameCharacterSet[(int)(eid & 0x3F)];
             eid >>= 6;
         }
         return new string(str);
