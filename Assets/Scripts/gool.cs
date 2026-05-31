@@ -1,3 +1,14 @@
+using System;
+using EID = System.UInt32;
+using LID = System.UInt32;
+using static Level;
+using static GLOBAL;
+using static geom;
+using static zoneData;
+using UnityEngine;
+using System.Runtime.InteropServices;
+using System.Collections.Generic;
+
 public class gool
 {
 #region gool flags
@@ -121,5 +132,346 @@ public class gool
     public const uint OBJECT_COUNT           = 96;
     public const uint LEVEL_SPAWN_COUNT      = 3592;
     public const uint SPAWN_COUNT            = 304;
+
+/* game state */
+    public const int GAME_STATE_CUTSCENE     = 0;
+    public const int GAME_STATE_PLAYING      = 0x100;
+    public const int GAME_STATE_GAMEOVER     = 0x200;
+    public const int GAME_STATE_CONTINUE     = 0x300;
+    public const int GAME_STATE_NEW_GEM      = 0x500;
+    public const int GAME_STATE_TITLE        = 0x600;
 #endregion
+#region types
+    public struct move_state
+    {
+        public int dir, angle, speed_scale;
+    }
+    public struct accel_state
+    {
+        public int accel, max_speed, decel;
+        public uint unk;
+    }
+    public struct const_buf
+    {
+        public uint[] buf;
+        public int idx;
+    }
+    public struct gool_bound
+    {
+        public bound bound;
+        public gool_object obj;
+    }
+    [StructLayout(LayoutKind.Explicit, Size = 48, Pack = 2)]
+    public struct colours
+    {
+        [FieldOffset(0)]
+        public Vector3 LightMat;
+        [FieldOffset(0)]
+        public Vector3 Color;
+        [FieldOffset(0)]
+        public unsafe fixed ushort L[12];
+
+        [FieldOffset(24)]
+        public Vector3 ColorMat;
+        [FieldOffset(24)]
+        public Vector3 Intensity;
+        [FieldOffset(24)]
+        public unsafe fixed ushort vertColorsRaw[12];
+        [FieldOffset(24)]
+        public unsafe fixed ushort c[12];
+
+        [FieldOffset(0)]
+        public unsafe fixed ushort a[24];
+    }
+    public class handle
+    {
+        public int type;
+
+        public gool_object self;
+        public int subtype;
+    }
+    public class gool_object
+    {
+        public handle       handle;
+        public bound        bounds;
+        public Entry        global;
+        public Entry        external;
+        public Entry        zone;
+        public uint         state;
+        public colours      colours;
+        public gool_process process;
+        public vectors      vectors;
+
+    }
+    public class vectors
+    {
+        public Vector3 trans, rot, scale, velocity, misc_a, misc_b, misc_c;
+        public int move_flags_a, mode_flags_b, mode_flags_c;
+        public gool_link box_link;
+    }
+    public class gool_link
+    {
+        public gool_object prev, next;
+    }
+    public class gool_process
+    {
+        public gool_links links = new gool_links();
+
+        public Vector3[] vectors    = new Vector3[6];
+        public Vector3[] angles     = new Vector3[6];
+
+        public uint 
+            status_a, status_b, status_c, subtype, pid_flags, sp, pc, fp, tp, ep, once_p;
+
+        public uint misc_flag;
+        public gool_object misc_child;
+        public uint misc_node;
+        public Entry misc_entry;
+        public uint misc_memcard;
+
+        public uint 
+            ack, anim_stamp, state_stamp, anim_counter, path_length, 
+            floor_y, state_flags, invincibility_state, invincibility_stamp, 
+            floor_impact_stamp, size, gool_event, voice_id, _150, anim_frame, node;
+
+        public uint[] memory = new uint[64];
+
+        public gool_anim anim_seq;
+        public zone_entity entity;
+
+        public int path_progress, speed, floor_impact_velocity, cam_zoom, ang_velocity_y, hotspot_size, _154;
+
+    }
+    public class gool_links
+    {
+        public gool_object self;
+        public gool_object parent;
+        public gool_object sibling;
+        public gool_object creator;
+        public gool_object player;
+        public gool_object collider;
+        public gool_object interrupter;
+        public gool_object children;
+    }
+    public class header
+    {
+        public uint type, category, unk_0x8, init_sp, subtype_map_idx, unk_0x14;
+
+        public header(byte[] raw)
+        {
+            Debug.Log($"new Gool Header was created with {raw.Length} bytes. Header contains 6 uints for {sizeof(uint) * 6} bytes. Check this for parity.");
+            type            = (uint)ConvertBits.FromInt32(raw, sizeof(uint) * 0);
+            category        = (uint)ConvertBits.FromInt32(raw, sizeof(uint) * 1);
+            unk_0x8         = (uint)ConvertBits.FromInt32(raw, sizeof(uint) * 2);
+            init_sp         = (uint)ConvertBits.FromInt32(raw, sizeof(uint) * 3);
+            subtype_map_idx = (uint)ConvertBits.FromInt32(raw, sizeof(uint) * 4);
+            unk_0x14        = (uint)ConvertBits.FromInt32(raw, sizeof(uint) * 5);
+        }
+    }
+    public class state_maps
+    {
+        public ushort[] event_map, subtype_map;
+
+        public state_maps(byte[] data, header header)
+        {
+            int eventCount = (int)(header.subtype_map_idx + 1);
+
+            event_map = new ushort[eventCount];
+
+            for (int i = 0; i < eventCount; i++)
+                event_map[i] = (ushort)ConvertBits.FromInt16(data, i * 2);
+
+            int subtypeCount = (data.Length / 2) - eventCount;
+
+            subtype_map = new ushort[subtypeCount];
+
+            for (int i = 0; i < subtypeCount; i++)
+                subtype_map[i] = (ushort)ConvertBits.FromInt16(
+                    data,
+                    (eventCount + i) * 2
+                );
+        }
+    }
+    public class gool_anim
+    {
+//NOT IMPLEMENTED
+    }
+#endregion
+#region variables
+    static public readonly move_state[] moveStates = new move_state[16]
+    {
+        new move_state{ dir = 8, angle = 0x000, speed_scale = 0x100 },
+        new move_state{ dir = 0, angle = 0x800, speed_scale = 0x100 },
+        new move_state{ dir = 2, angle = 0x400, speed_scale = 0x100 },
+        new move_state{ dir = 1, angle = 0x600, speed_scale = 0x147 },
+        new move_state{ dir = 4, angle = 0x000, speed_scale = 0x100 },
+        new move_state{ dir = 8, angle = 0x000, speed_scale = 0x000 },
+        new move_state{ dir = 3, angle = 0x200, speed_scale = 0x147 },
+        new move_state{ dir = 8, angle = 0x000, speed_scale = 0x000 },
+        new move_state{ dir = 6, angle = 0xC00, speed_scale = 0x100 },
+        new move_state{ dir = 7, angle = 0xA00, speed_scale = 0x147 },
+        new move_state{ dir = 8, angle = 0x000, speed_scale = 0x000 },
+        new move_state{ dir = 8, angle = 0x000, speed_scale = 0x000 },
+        new move_state{ dir = 5, angle = 0xE00, speed_scale = 0x147 },
+        new move_state{ dir = 8, angle = 0x000, speed_scale = 0x000 },
+        new move_state{ dir = 8, angle = 0x000, speed_scale = 0x000 },
+        new move_state{ dir = 8, angle = 0x000, speed_scale = 0x000 }
+    };
+    static public readonly accel_state[] accel_states  = new accel_state[7]
+    {
+        new accel_state{ accel = 0x000000, max_speed = 0x7D000, unk = 0x00, decel = 0x000000 },
+        new accel_state{ accel = 0x271000, max_speed = 0x96000, unk = 0x1E, decel = 0x271000 },
+        new accel_state{ accel = 0x138800, max_speed = 0x96000, unk = 0x1E, decel = 0x09C400 },
+        new accel_state{ accel = 0x190000, max_speed = 0xAAE60, unk = 0x0F, decel = 0x190000 },
+        new accel_state{ accel = 0x271000, max_speed = 0xC8000, unk = 0x1E, decel = 0x271000 },
+        new accel_state{ accel = 0x1A0AAA, max_speed = 0x64000, unk = 0x1E, decel = 0x271000 },
+        new accel_state{ accel = 0x0D0555, max_speed = 0x64000, unk = 0x1E, decel = 0x09C400 }
+    };
+    static public uint[]        consts         = new uint[2];
+    static public const_buf     in_consts;
+    static public const_buf     out_consts;
+    static public EID           crash_eid      = 0;
+    static public gool_object   crash          = null;
+    static public ushort[]      level_spawns   = new ushort[LEVEL_SPAWN_COUNT];      
+    static public uint[]        spawns         = new uint[SPAWN_COUNT];
+    static public gool_object[] objects;        
+    static public gool_object   player;
+    static public handle[]      handles        = new handle[8];
+    static public handle        free_objects;
+    static public gool_object   cur_obj;
+    static public uint          frames_elapsed;
+    static public gool_bound[]  object_bounds  = new gool_bound[28];
+    static public int           object_bound_count;
+    //static public globals       globals;
+
+
+#endregion
+
+    public gool()
+    {
+        in_consts = new const_buf { buf = consts, idx = 0 };
+        out_consts = new const_buf { buf = consts, idx = 0 };
+    }
+
+    static public gool_object ObjectCreate(gool_object parent, int exec, int subtype, int argc, uint argv, int flag)
+    {
+        gool_object child;
+        Entry zone;
+        zone_header header;
+
+        if (exec == 0 && subtype == 0)
+        {
+            crash = player;
+            child = crash;
+        }
+        else
+        {
+            child = new gool_object();
+        }
+
+        ObjectAddChild(parent, child);
+
+        child.handle.subtype = 3;
+
+        ObjectInit(child, exec, subtype, argc, (int)argv);
+
+        zone = child.zone != null ? child.zone : level.cur_zone;
+        header = new zone_header(zone.ExtractItem(0));
+
+        child.colours = (child == crash)
+            ? header.gfx.player_colours
+            : header.gfx.object_colours;
+
+        return child;
+    }
+    static public void ObjectAddChild(gool_object parent, gool_object child)
+    {
+        if (parent == null || child == null)
+            return;
+
+        child.process.links.parent = parent;
+        child.process.links.sibling = parent.process.links.children;
+        parent.process.links.children = child;
+    }
+    static public void ObjectInit(gool_object obj, int exec, int subtype, int argc, int argv)
+    {
+        gool_object parent;
+        vectors vectors;
+        header header;
+        state_maps maps;
+        Entry global;
+        EID p_eid;
+        int idx, idx_states, state, res;
+
+        parent = obj.process.links.parent;
+        obj.process.node = 0xFFFF;
+        obj.process.pid_flags = 0;
+        obj.process.entity = null;
+        obj.process.path_progress = 0;
+        obj.process.path_length = 0;
+        obj.handle.type = 1;
+        obj.process.vectors[0].x = 0;
+        obj.process.vectors[0].y = 0;
+        obj.process.vectors[0].z = 0;
+        obj.process.vectors[1].y = 0;
+        obj.process.vectors[1].x = 0;
+        obj.process.vectors[1].z = 0;
+        obj.process.vectors[2].x = 0;
+        obj.process.vectors[2].y = 0;
+        obj.process.vectors[2].z = 0;
+        obj.process.speed = 0;
+        obj.process.anim_frame = 0;
+        obj.process.ack = 0;
+        obj.process.status_a = 0;
+        obj.process.status_c = 0;
+        obj.process.status_b = 0;
+        obj.process.invincibility_state = 0;
+        obj.process.size = 0;
+        obj.process.floor_impact_stamp = 0;
+        obj.process.hotspot_size = 0;
+        obj.process.voice_id = unchecked((uint)-2);
+
+        if(parent is not null && parent.handle.type == 1)
+        {
+            obj.zone  = parent.zone;
+            obj.vectors.trans = parent.vectors.trans;
+            obj.vectors.rot   = parent.vectors.rot;
+            obj.vectors.scale = parent.vectors.scale;
+        }
+        else
+        {
+            vectors = obj.vectors;
+            obj.zone = null;
+            obj.vectors.rot.y = 0;
+            obj.vectors.rot.x = 0;
+            obj.vectors.rot.z = 0;
+            obj.vectors.scale.x = 0x1000;
+            obj.vectors.scale.y = 0x1000;
+            obj.vectors.scale.z = 0x1000;
+        }
+        p_eid = ldat.exec_map[exec];
+        if (exec == 4 || exec == 5 || exec == 29) { obj.zone = null; }
+        if (exec == 0)                            { obj.process.cam_zoom = 0; }
+        global = ldat.parent.entries[p_eid];
+        obj.global = global;
+        obj.process.links.self          = obj;
+        obj.process.links.collider      = null;
+        obj.process.links.creator       = null;
+        obj.process.links.interrupter   = null;
+        global = obj.global;
+        obj.handle.subtype = subtype;
+        obj.process.anim_seq = null;
+        obj.process.once_p   = 0;
+        obj.process.links.player = player;
+        header = new header(obj.global.ExtractItem(0));
+        maps = new state_maps(obj.global.ExtractItem(3), header);
+        idx_states = (int)header.subtype_map_idx;
+        state = maps.subtype_map[idx_states + subtype];
+
+        if(state == 0xFF)
+            Debug.LogWarning($"On ObjectInit {subtype}, invalid state");
+
+    }
+
 }
+

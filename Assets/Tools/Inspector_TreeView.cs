@@ -38,7 +38,7 @@ public class NSFTreeView : TreeView
 
             if (chunk is NormalChunk normal)
             {
-                foreach (var entry in normal.entries)
+                foreach (var entry in normal.entries.Values)
                 {
                     var entryItem =
                         CreateItem(entry.type.ToString(), entry);
