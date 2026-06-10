@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using EID = System.UInt32;
-using LID = System.UInt32;
+using LID = System.Int32;
 
 public class LDAT : Entry
 {
@@ -20,7 +20,7 @@ public class LDAT : Entry
         pFOV        = 0x114;
 
     public new uint magic           => (uint)ConvertBits.FromInt32(data, pMAGIC);      //Big ol assumptions happening here
-    public LID      lid             => (uint)ConvertBits.FromInt32(data, pLID); 
+    public LID      lid             =>       ConvertBits.FromInt32(data, pLID); 
     public EID      zone_spawn      => (uint)ConvertBits.FromInt32(data, pZONE_SPAWN);
     public int      path_idx_spawn  =>       ConvertBits.FromInt32(data, pPATH_IDX_S);
     public uint     fov             => (uint)ConvertBits.FromInt32(data, pFOV);

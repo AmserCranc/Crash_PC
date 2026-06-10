@@ -1,6 +1,6 @@
 using System;
 using static zoneData;
-using LID = System.UInt32;
+using LID = System.Int32;
 using EID = System.UInt32;
 using UnityEngine;
 using System.Collections.Generic;
@@ -166,6 +166,7 @@ public class Level
 
     public void InitLevelGlobals()
     {
+        GLOBAL.Init();
         current_map_level    = 99;
         saved_title_state    = -1;
         title_state          = 7;
@@ -217,23 +218,23 @@ public class Level
         switch (GLOBAL.ldat.lid) {
         case 5:
             if (flag >= 1)
-            ObjectCreate(handles[4].self, 9, 4, 0, 0, 1);
+            ObjectCreate(GLOBAL.objectCollections[4].GetComponent<gool_object>(), 9, 4, 0, 0, 1);
             break;
         case 0xE:
             break;
         case 0x14:
         case 0x16:
             if (flag >= 1)
-            ObjectCreate(handles[4].self, 23, 6, 0, 0, 1);
+            ObjectCreate(GLOBAL.objectCollections[4].GetComponent<gool_object>(), 23, 6, 0, 0, 1);
             break;
         case 0x17:
             if (flag >= 1)
-            ambiance_object = ObjectCreate(handles[4].self, 39, 4, 0, 0, 1);
+            ambiance_object = ObjectCreate(GLOBAL.objectCollections[4].GetComponent<gool_object>(), 39, 4, 0, 0, 1);
             break;
         case 0x22:
         case 0x2E:
             if (flag >= 1)
-            ObjectCreate(handles[4].self, 53, 13, 0, 0, 1);
+            ObjectCreate(GLOBAL.objectCollections[4].GetComponent<gool_object>(), 53, 13, 0, 0, 1);
             break;
         case 0x28:
         case 0x2A:
@@ -248,12 +249,32 @@ public class Level
         gem_stamp = 0;
         island_cam_state = 0;
         if (pbak_state != 2)
-            caption_obj = 0;
+            caption_obj = null;
         title_pause_state = 0;
         TransSmoothStopAtSolid(0, 0, 0);
         fade_step = 32;
-        cur_zone_query.once = 0;
+        //cur_zone_query.once = 0;
         if (game_state != GAME_STATE_TITLE)
             fade_counter = 288;
         }
+
+    public void ShaderParamsUpdate(int i)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void TransSmoothStopAtSolid(int a, int b, int c)
+    {
+        throw new NotImplementedException();
+    }
+    
+    public void SpawnObjects()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Restart(Level.level_state savestate)
+    {
+        
+    }
 }

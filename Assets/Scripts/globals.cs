@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-using LID = System.UInt32;
+using LID = System.Int32;
 using EID = System.UInt32;
 using System;
 using System.IO;
@@ -15,6 +15,7 @@ static public class GLOBAL
     static public Material DEMO;
     static public gool_object crash;
     static public Level level;
+    static public List<GameObject> objectCollections;
 
 #region globals
     static public int          game_state;
@@ -24,17 +25,17 @@ static public class GLOBAL
     static public int          fog_z;
     static public uint         next_display_flags;
     static public int          respawn_count;
-    static public gool_object  fruit_hud;
-    static public gool_object  life_hud;
-    static public gool_object  ambiance_object;
+    static public GameObject   fruit_hud;
+    static public GameObject   life_hud;
+    static public GameObject   ambiance_object;
     static public uint         current_display_flags;
     static public int          i_death_cam;
     static public int          dword_800618B8;
-    static public gool_object  pause_obj;
+    static public GameObject   pause_obj;
     static public uint         dword_800618C0;
-    static public gool_object  pickup_hud;
+    static public GameObject   pickup_hud;
     static public int          cam_rot_xz_ro;
-    static public gool_object  aku_mask;
+    static public GameObject   aku_mask;
     static public int          state_flag;
     static public int          title_state;
     static public int          saved_title_state;
@@ -54,7 +55,7 @@ static public class GLOBAL
     static public int          mono;
     static public uint         sfx_vol;
     static public uint         mus_vol;
-    static public gool_object  camera_spin_object;
+    static public GameObject   camera_spin_object;
     static public Vector3      camera_trans_ro;
     static public Vector3      camera_rotation_ro;
     static public uint         ticks_current_frame;
@@ -67,7 +68,7 @@ static public class GLOBAL
     static public uint         dword_80061958;
     static public uint         dword_8006195C;
     static public uint         dword_80061960;
-    static public gool_object  light_source_obj;
+    static public GameObject   light_source_obj;
     static public uint         dword_80061968;
     static public int          dcam_zoom_speed;
     static public int          dcam_flip_speed;
@@ -89,7 +90,7 @@ static public class GLOBAL
     static public uint         map_level_links;
     static public int          title_pause_state;
     static public uint         map_key_links;
-    static public gool_object  caption_obj;
+    static public GameObject   caption_obj;
     static public uint         dword_800619C0;
     static public uint         dword_800619C4;
     static public int          draw_count_ro;
@@ -113,11 +114,14 @@ static public class GLOBAL
     static public int          saved_level_count;
     static public uint         dword_80061A54;
     static public int          options_changed;
-    static public gool_object  previous_box;
+    static public GameObject   previous_box;
     static public uint         boxes_y;
     static public zone_entity  previous_box_entity;
 
     static public EID          crash_eid = 0;
+    static public LID          next_lid;
+    static public int          bonus_return2;
+    static public zone_header  zone_header;
 #endregion
 
     
@@ -126,6 +130,15 @@ static public class GLOBAL
     static public LDAT ldat; //Disc data
 
 #endregion
+
+    static public void Init()
+    {
+        objectCollections = new();
+        for(int i = 0; i < 8; i++)
+        {
+            objectCollections.Add(new GameObject($"root_{i}"));
+        }
+    }
 }
 
 // public class BGM

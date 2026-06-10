@@ -11,6 +11,7 @@ using System.Collections.Generic;
 
 public class gool
 {
+    public const int EID_NONE = 0x6396347F;
 #region gool flags
 /* events */
     public const uint EVENT_JUMPED_ON       = 0;
@@ -183,14 +184,7 @@ public class gool
         [FieldOffset(0)]
         public unsafe fixed ushort a[24];
     }
-    public class handle
-    {
-        public int type;
-
-        public gool_object self;
-        public int subtype;
-    }
-    public class gool_object
+    public class gool_object : MonoBehaviour
     {
         public handle       handle;
         public bound        bounds;
@@ -202,6 +196,13 @@ public class gool
         public gool_process process;
         public vectors      vectors;
 
+    }
+    public class handle
+    {
+        public int type;
+
+        public gool_object self;
+        public int subtype;
     }
     public class vectors
     {
@@ -336,8 +337,8 @@ public class gool
     static public uint[]        spawns         = new uint[SPAWN_COUNT];
     static public gool_object[] objects;        
     static public gool_object   player;
-    static public handle[]      handles        = new handle[8];
-    static public handle        free_objects;
+    //static public handle[]      handles        = new handle[8];
+    //static public handle        free_objects;
     static public gool_object   cur_obj;
     static public uint          frames_elapsed;
     static public gool_bound[]  object_bounds  = new gool_bound[28];
@@ -353,9 +354,10 @@ public class gool
         out_consts = new const_buf { buf = consts, idx = 0 };
     }
 
-    static public gool_object ObjectCreate(gool_object parent, int exec, int subtype, int argc, uint argv, int flag)
+    static public GameObject ObjectCreate(gool_object parent, int exec, int subtype, int argc, uint argv, int flag)
     {
-        gool_object child;
+        GameObject newObject = new();
+        gool_object child = newObject.AddComponent<gool_object>();;
         Entry zone;
         zone_header header;
 
@@ -370,9 +372,6 @@ public class gool
         }
 
         ObjectAddChild(parent, child);
-
-        child.handle.subtype = 3;
-
         ObjectInit(child, exec, subtype, argc, (int)argv);
 
         zone = child.zone != null ? child.zone : level.cur_zone;
@@ -382,7 +381,7 @@ public class gool
             ? header.gfx.player_colours
             : header.gfx.object_colours;
 
-        return child;
+        return newObject;
     }
     static public void ObjectAddChild(gool_object parent, gool_object child)
     {
@@ -401,7 +400,7 @@ public class gool
         state_maps maps;
         Entry global;
         EID p_eid;
-        int idx, idx_states, state, res;
+        int idx_states, state;
 
         parent = obj.process.links.parent;
         obj.process.node = 0xFFFF;
@@ -473,5 +472,20 @@ public class gool
 
     }
 
+
+    static public void SendEvent(gool_object sender, gool_object recipient, uint evnt, int argc, uint argv)
+    {
+        throw new NotImplementedException();
+    }
+
+    static public void SendToColliders(gool_object sender, uint evnt, int type, int argc, uint argv)
+    {
+        throw new NotImplementedException();
+    }
+
+    static public void UpdateObjects(int flags)
+    {
+        throw new NotImplementedException();
+    }
 }
 
