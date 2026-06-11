@@ -9,37 +9,36 @@ using static geom;
 using static gool;
 using static solid;
 
-public class Level
+static public class Level
 {
     public const int EID_NONE = 0x6396347F;
 
 #region .sdata
-    public int      bonus_return    = 0;
-    public int      ldat_not_inited = 1;
-    public char[]   title_zone_name = "0b_pZ".ToCharArray();
-    public int      first_spawn     = 0;
+    static public int      bonus_return    = 0;
+    static public int      ldat_not_inited = 1;
+    static public char[]   title_zone_name = "0b_pZ".ToCharArray();
+    static public int      first_spawn     = 0;
 #endregion
 #region .bss
-    public Entry        cur_zone, obj_zone;     /* 80057914, 80057918 */
-    public zone_path    cur_path;               /* 8005791C */
-    public int          cur_progress;           /* 80057920 */
-    public Vector3      unk_80057924;           /* 80057924 */
-    public int          cam_rot_xz;             /* 80057930 */
-    public Vector3      cam_rot_before;         /* 80057934 */
-    public Vector3      cam_rot_after;          /* 80057940 */
-    public Vector3      cam_rot_xz_dir;         /* 8005794C */
-    public uint         unk_80057958;           /* 80057958 */
-    public uint         unk_8005795C;           /* 8005795C */
-    public int          draw_count;             /* 80057960 */
+    static public Entry        cur_zone, obj_zone;     /* 80057914, 80057918 */
+    static public zone_path    cur_path;               /* 8005791C */
+    static public int          cur_progress;           /* 80057920 */
+    static public Vector3      unk_80057924;           /* 80057924 */
+    static public int          cam_rot_xz;             /* 80057930 */
+    static public Vector3      cam_rot_before;         /* 80057934 */
+    static public Vector3      cam_rot_after;          /* 80057940 */
+    static public Vector3      cam_rot_xz_dir;         /* 8005794C */
+    static public uint         unk_80057958;           /* 80057958 */
+    static public uint         unk_8005795C;           /* 8005795C */
+    static public int          draw_count;             /* 80057960 */
    //public rgb8         prev_vram_fill_color;   /* 80057964 */
    //public rgb8         vram_fill_color;        /* 80057968 */
    //public rgb8         next_vram_fill_color;   /* 8005796C */
-    public uint         respawn_stamp;          /* 80057970 */
-    public level_state  savestate;              /* 80057974 */
+    static public uint         respawn_stamp;          /* 80057970 */
+    static public level_state  savestate;              /* 80057974 */
 #endregion
 
-    public level_state  levelState;
-    public nsd_ldat     ldat;
+    static public level_state  levelState;
 
     public class level_state
     {
@@ -53,31 +52,6 @@ public class Level
         public uint[] spawns;
         public int box_count;
     }
-
-    public class nsd_ldat
-    {
-        public uint     magic;         
-        public LID      lid;           
-        public EID      zone_spawn ;   
-        public int      path_idx_spawn;
-        public uint     fov;    
-        public EID[]    exec_map;
-
-        public nsd_ldat()
-        {
-            magic           = GLOBAL.ldat.magic;
-            lid             = GLOBAL.ldat.lid;
-            zone_spawn      = GLOBAL.ldat.zone_spawn;
-            path_idx_spawn  = GLOBAL.ldat.path_idx_spawn;
-            fov             = GLOBAL.ldat.fov;
-            exec_map        = GLOBAL.ldat.exec_map;
-        }
-    }
-
-
-
-
-
 
 
     // public void Init()
@@ -159,14 +133,13 @@ public class Level
     //     throw new NotImplementedException("playback chooser");
     // }
 
-    public void LevelUpdate(Entry zone, zone_path path, int progress, uint flags)
+    static public void LevelUpdate(Entry zone, zone_path path, int progress, uint flags)
     {
-        
+        throw new NotImplementedException();
     }
 
-    public void InitLevelGlobals()
+    static public void InitLevelGlobals()
     {
-        GLOBAL.Init();
         current_map_level    = 99;
         saved_title_state    = -1;
         title_state          = 7;
@@ -186,7 +159,7 @@ public class Level
         saved_level_count    = 1;
         LevelResetGlobals(1);
     }
-    public void LevelResetGlobals(int flag)
+    static public void LevelResetGlobals(int flag)
     {
         if(flag != 1)
             return;
@@ -210,39 +183,40 @@ public class Level
         saved_level_count   = 1;
         life_count          = init_life_count;
 
-        levelState.level_spawns = new ushort[gool.LEVEL_SPAWN_COUNT];
+        level_spawns = new ushort[gool.LEVEL_SPAWN_COUNT];
 
     }
-    public void InitMisc(int flag) 
+    static public void InitMisc(int flag) 
     {
-        switch (GLOBAL.ldat.lid) {
-        case 5:
-            if (flag >= 1)
-            ObjectCreate(GLOBAL.objectCollections[4].GetComponent<gool_object>(), 9, 4, 0, 0, 1);
-            break;
-        case 0xE:
-            break;
-        case 0x14:
-        case 0x16:
-            if (flag >= 1)
-            ObjectCreate(GLOBAL.objectCollections[4].GetComponent<gool_object>(), 23, 6, 0, 0, 1);
-            break;
-        case 0x17:
-            if (flag >= 1)
-            ambiance_object = ObjectCreate(GLOBAL.objectCollections[4].GetComponent<gool_object>(), 39, 4, 0, 0, 1);
-            break;
-        case 0x22:
-        case 0x2E:
-            if (flag >= 1)
-            ObjectCreate(GLOBAL.objectCollections[4].GetComponent<gool_object>(), 53, 13, 0, 0, 1);
-            break;
-        case 0x28:
-        case 0x2A:
-            ShaderParamsUpdate(1);
-            break;
-        default:
-            ambiance_object = null;
-            break;
+        switch (GLOBAL.nsd.levelID) 
+        {
+            case 5:
+                if (flag >= 1)
+                ObjectCreate(GLOBAL.objectCollections[4].GetComponent<gool_object>(), 9, 4, 0, 0, 1);
+                break;
+            case 0xE:
+                break;
+            case 0x14:
+            case 0x16:
+                if (flag >= 1)
+                ObjectCreate(GLOBAL.objectCollections[4].GetComponent<gool_object>(), 23, 6, 0, 0, 1);
+                break;
+            case 0x17:
+                if (flag >= 1)
+                ambiance_object = ObjectCreate(GLOBAL.objectCollections[4].GetComponent<gool_object>(), 39, 4, 0, 0, 1);
+                break;
+            case 0x22:
+            case 0x2E:
+                if (flag >= 1)
+                ObjectCreate(GLOBAL.objectCollections[4].GetComponent<gool_object>(), 53, 13, 0, 0, 1);
+                break;
+            case 0x28:
+            case 0x2A:
+                ShaderParamsUpdate(1);
+                break;
+            default:
+                ambiance_object = null;
+                break;
         }
         is_first_zone = 1;
         box_count = 0;
@@ -258,22 +232,22 @@ public class Level
             fade_counter = 288;
         }
 
-    public void ShaderParamsUpdate(int i)
+    static public void ShaderParamsUpdate(int i)
     {
         throw new NotImplementedException();
     }
 
-    public void TransSmoothStopAtSolid(int a, int b, int c)
+    static public void TransSmoothStopAtSolid(int a, int b, int c)
     {
         throw new NotImplementedException();
     }
     
-    public void SpawnObjects()
+    static public void SpawnObjects()
     {
         throw new NotImplementedException();
     }
 
-    public void Restart(Level.level_state savestate)
+    static public void Restart(Level.level_state savestate)
     {
         
     }

@@ -68,7 +68,7 @@ unsafe public class Entry
             case Type.WGEO: return new WGEO(this);
             case Type.SLST: return new SLST(this);
             case Type.TPAG: return new TPAG(this);
-            case Type.LDAT: return new LDAT(this, (NormalChunk)parent);
+            // case Type.LDAT: return new LDAT(this, (NormalChunk)parent);
             case Type.ZDAT: return new ZDAT(this);
             case Type.GOOL: return new GOOL(this);
             case Type.ADIO: return new ADIO(this);

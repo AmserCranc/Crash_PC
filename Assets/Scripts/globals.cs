@@ -14,7 +14,7 @@ static public class GLOBAL
     static public Material WGEO_material;
     static public Material DEMO;
     static public gool_object crash;
-    static public Level level;
+    //static public Level level;
     static public List<GameObject> objectCollections;
 
 #region globals
@@ -126,32 +126,19 @@ static public class GLOBAL
 
     
 
-#region NS data
-    static public LDAT ldat; //Disc data
+    static public NSD nsd;
 
-#endregion
 
     static public void Init()
     {
         objectCollections = new();
         for(int i = 0; i < 8; i++)
         {
-            objectCollections.Add(new GameObject($"root_{i}"));
+            GameObject instance = new GameObject($"root_{i}");
+            objectCollections.Add(instance);
+            instance.AddComponent<gool_object>();
+            
         }
     }
 }
-
-// public class BGM
-// {
-//     public List<INST> instruments;
-//     public List<MIDI> sequences;
-
-//     public BGM()
-//     {
-//         instruments = new();
-//         sequences = new();
-//     }
-// }
-
-
 

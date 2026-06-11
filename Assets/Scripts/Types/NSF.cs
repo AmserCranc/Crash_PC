@@ -82,6 +82,7 @@ public class NSF
                 case Chunk.Type.SPCH:
                     chunks.Add(new SpeechChunk(chunk));
                     break;
+                    
             }
         }
 #endregion

@@ -196,6 +196,15 @@ public class gool
         public gool_process process;
         public vectors      vectors;
 
+        public gool_object()
+        {
+            handle = new handle();
+            bounds = new bound();
+            process = new gool_process();
+            vectors = new vectors();
+
+        }
+
     }
     public class handle
     {
@@ -374,7 +383,7 @@ public class gool
         ObjectAddChild(parent, child);
         ObjectInit(child, exec, subtype, argc, (int)argv);
 
-        zone = child.zone != null ? child.zone : level.cur_zone;
+        zone = child.zone != null ? child.zone : Level.cur_zone;
         header = new zone_header(zone.ExtractItem(0));
 
         child.colours = (child == crash)
@@ -448,10 +457,10 @@ public class gool
             obj.vectors.scale.y = 0x1000;
             obj.vectors.scale.z = 0x1000;
         }
-        p_eid = ldat.exec_map[exec];
+        p_eid = (uint)GLOBAL.nsd.execEIDmap[exec];
         if (exec == 4 || exec == 5 || exec == 29) { obj.zone = null; }
         if (exec == 0)                            { obj.process.cam_zoom = 0; }
-        global = ldat.parent.entries[p_eid];
+        global = FindEntry(p_eid);
         obj.global = global;
         obj.process.links.self          = obj;
         obj.process.links.collider      = null;
@@ -484,6 +493,11 @@ public class gool
     }
 
     static public void UpdateObjects(int flags)
+    {
+        throw new NotImplementedException();
+    }
+
+    static public Entry FindEntry(EID eID)
     {
         throw new NotImplementedException();
     }

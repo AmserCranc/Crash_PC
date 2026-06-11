@@ -235,7 +235,6 @@ public class WGEO : Entry
                 f.meta.z = GetTPage(p.page);
                 f.meta.w = texFace.blendMode;
                 f.meta1.x = texFace.colourMode;
-                Debug.Log(texFace.colourMode);
 
                 faces.Add(f);
             }

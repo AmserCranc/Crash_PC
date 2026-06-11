@@ -43,12 +43,13 @@ unsafe public class Bootstrap : MonoBehaviour
 
     void Start()
     {
-        pads = new InputSystem.Pad[2];
-        pads[0] = new InputSystem.Pad();
-        GLOBAL.level.InitLevelGlobals();
-        LoadLevel(LID_BOOTLEVEL);
-        CreateCoreObjects();
-        GLOBAL.level.InitMisc(1);
+        GLOBAL.Init();                          Debug.Log("Passed Global init");
+        pads = new InputSystem.Pad[2];          
+        pads[0] = new InputSystem.Pad();        Debug.Log("Passed Pad init");
+        Level.InitLevelGlobals();               Debug.Log("Passed InitLevelGlobals");
+        LoadLevel(LID_BOOTLEVEL);               Debug.Log($"Passed LoadLevel with {LID_BOOTLEVEL}");
+        CreateCoreObjects();                    Debug.Log("Passed CreateCoreObjects");
+        Level.InitMisc(1);                      Debug.Log("Passed LevelInitMisc");
 
 #region Chunk Visualiser
         List<Color> blocks = new();
@@ -68,6 +69,7 @@ unsafe public class Bootstrap : MonoBehaviour
         levelHeader = new($"{streamLocation}{FILE_BASE}{level}.nsd");
         levelData   = new($"{streamLocation}{FILE_BASE}{level}.nsf");
 
+
     }
 
     void CreateCoreObjects()
@@ -86,7 +88,7 @@ unsafe public class Bootstrap : MonoBehaviour
 
     void FixedUpdate()
     {
-        lid = GLOBAL.ldat.lid;
+        lid = GLOBAL.nsd.levelID;
         is_pause_lid = (lid != LevelID.Map_Main_Menu_Title_Sequence && lid != LevelID.Level_Completion_Screen && lid != LevelID.Intro) ? 1 : 0; 
         can_pause = (GLOBAL.pbak_state == 0) && ((is_pause_lid > 0 && GLOBAL.title_pause_state != -1) || GLOBAL.title_pause_state > 0) ? 1 : 0;
 
@@ -137,14 +139,14 @@ unsafe public class Bootstrap : MonoBehaviour
             SendToColliders(null, EVENT_LEVEL_END, 0, 0, 0);
             if(GLOBAL.next_lid == -2)
             {
-                lid = GLOBAL.level.savestate.lid;
-                GLOBAL.level.bonus_return = 1;
+                lid = Level.savestate.lid;
+                Level.bonus_return = 1;
                 GLOBAL.bonus_return2 = 1;
             }
             else
             {
                 lid = GLOBAL.next_lid;
-                GLOBAL.level.bonus_return = 0;
+                Level.bonus_return = 0;
                 GLOBAL.bonus_return2 = 0;
             }
 
@@ -166,17 +168,17 @@ unsafe public class Bootstrap : MonoBehaviour
             if(GLOBAL.bonus_return2 >= 0)
             {
                 GLOBAL.next_lid = -2;
-                GLOBAL.level.SpawnObjects();
+                Level.SpawnObjects();
                 GLOBAL.next_lid = -1;
-                GLOBAL.level.Restart(GLOBAL.level.savestate);
+                Level.Restart(Level.savestate);
             }
-            GLOBAL.level.bonus_return = 0;
+            Level.bonus_return = 0;
         }
 //Start level
-        GLOBAL.level.SpawnObjects();
+        Level.SpawnObjects();
         if(paused == 0)
         {
-            GLOBAL.zone_header = new zoneData.zone_header(GLOBAL.level.cur_zone.ExtractItem(0));
+            GLOBAL.zone_header = new zoneData.zone_header(Level.cur_zone.ExtractItem(0));
             if ((GLOBAL.zone_header.display_flags & (ZDAT.ZONE_FLAG_DARK2 | ZDAT.ZONE_FLAG_LIGHTNING)) != 0)
             { //handle level graphics 
             }
@@ -187,7 +189,7 @@ unsafe public class Bootstrap : MonoBehaviour
 
             CamUpdate();
         }
-        GLOBAL.zone_header = new zoneData.zone_header(GLOBAL.level.cur_zone.ExtractItem(0));
+        GLOBAL.zone_header = new zoneData.zone_header(Level.cur_zone.ExtractItem(0));
         if (((GLOBAL.current_display_flags & FLAG_DISPLAY_WORLDS) != 0) && (GLOBAL.zone_header.world_count != 0) && (wgeom_disabled == 0)) 
         {
             if ((GLOBAL.zone_header.display_flags & ZDAT.ZONE_FLAG_DARK2) != 0)
@@ -206,7 +208,7 @@ unsafe public class Bootstrap : MonoBehaviour
 //Tick gool engine
         UpdateObjects(paused == 0 ? 1 : 0);
 //Handle title logic
-        if (GLOBAL.ldat.lid == LevelID.Map_Main_Menu_Title_Sequence)
+        if (GLOBAL.nsd.levelID == LevelID.Map_Main_Menu_Title_Sequence)
             TitleUpdate();
 
 
