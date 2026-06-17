@@ -25,9 +25,9 @@ static public class Level
     static public int          cur_progress;           /* 80057920 */
     static public Vector3      unk_80057924;           /* 80057924 */
     static public int          cam_rot_xz;             /* 80057930 */
-    static public Vector3      cam_rot_before;         /* 80057934 */
-    static public Vector3      cam_rot_after;          /* 80057940 */
-    static public Vector3      cam_rot_xz_dir;         /* 8005794C */
+    static public Quaternion   cam_rot_before;         /* 80057934 */
+    static public Quaternion   cam_rot_after;          /* 80057940 */
+    static public Quaternion   cam_rot_xz_dir;         /* 8005794C */
     static public uint         unk_80057958;           /* 80057958 */
     static public uint         unk_8005795C;           /* 8005795C */
     static public int          draw_count;             /* 80057960 */
@@ -62,7 +62,104 @@ static public class Level
 
     static public void LevelUpdate(Entry zone, zone_path path, int progress, uint flags)
     {
-        throw new NotImplementedException();
+        //Skipping the SLST and loading
+
+        if(zone == null || path == null)
+        {
+            Level.update_pend = 0;
+            return;
+        }
+
+        int pathLength = path.length << 8;
+        progress = Math.Clamp(progress, 0, pathLength -1);
+        int ptIndex = progress >> 8;
+        int currentPtIndex = cur_progress >> 8;
+
+        bool change =
+            zone != cur_zone ||
+            path != cur_path ||
+            ptIndex != currentPtIndex;
+
+        if(change)
+        {
+            if(zone != cur_zone)
+            {
+                bool neighbourFlag = true;
+                item_pool1 = 0;
+                zone_header previousHeader = null;
+
+                if(game_state == GAME_STATE_TITLE)
+                    neighbourFlag = (flags & 2) != 0;
+
+                if(cur_zone != null)
+                {
+                    obj_zone = zone;
+                    neighbourFlag = (flags & 2) != 0;
+                    previousHeader = new zone_header(cur_zone.ExtractItem(0));
+                    ZoneTerminateDifference(zone);
+                }
+
+                if((flags & 1) != 0)
+                    for(int i = 0; i < spawns.Length; i++)
+                        spawns[i] &= 0xFFFFFFF9;
+
+                cur_zone = zone;
+                cur_path = path;
+                cur_progress = progress;
+
+                zone_header header = new zone_header(zone.ExtractItem(0));
+
+                foreach(var neighbour in header.neighbours)
+                {
+                    zone_header neighbourHeader = new zone_header(nsf.entryTable[(int)neighbour].ExtractItem(0));
+
+                    if((neighbourHeader.display_flags & 1) == 0)
+                    {
+                        previous_box = null;
+                        previous_box_entity = null;
+                        boxes_y = 0x19000;
+
+                        neighbourHeader.display_flags |= 3;
+                    }
+
+                    if(neighbourFlag)
+                        neighbourHeader.display_flags |= 4;
+                    else
+                        neighbourHeader.display_flags &= ~4u;
+                }
+
+                LevelUpdateMisc(header.gfx, flags);
+            }
+            else
+            {
+                cur_zone = zone;
+                cur_path = path;
+                cur_progress = progress;
+            }
+        }
+        else
+        {
+            if(progress == cur_progress)
+            {
+                Level.update_pend = 0;
+                return;
+            }
+
+            cur_progress = progress;
+        }
+
+        Transform cam = Camera.main.transform;
+
+        var pose = GoolCamera.ProgressToPose(cur_path, -cur_progress);
+
+        cam_rot_before = cam.rotation;
+
+        cam.position = pose.position;
+        cam.rotation = pose.rotation;
+
+        cam_rot_after = cam.rotation;
+
+        Level.update_pend = 0;
     }
 
     static public void InitLevelGlobals()
@@ -177,5 +274,53 @@ static public class Level
     static public void Restart(Level.level_state savestate)
     {
         
+    }
+
+    static void ZoneTerminateDifference(Entry newZone)
+    {
+        if (cur_zone == null)
+            return;
+
+        zoneData.zone_header curHeader =
+            new zone_header(cur_zone.ExtractItem(0));
+
+        zoneData.zone_header newHeader =
+            new zone_header(newZone.ExtractItem(0));
+
+        HashSet<Entry> newNeighbours = new();
+
+        for (int i = 0; i < newHeader.neighbour_count; i++)
+        {
+            var e = GLOBAL.nsf.entryTable[(int)newHeader.neighbours[i]];
+            if (e != null)
+                newNeighbours.Add(e);
+        }
+
+        // Compare against current zone neighbours
+        for (int i = 0; i < curHeader.neighbour_count; i++)
+        {
+            var curNeighbour = GLOBAL.nsf.entryTable[(int)curHeader.neighbours[i]];
+            if (curNeighbour == null)
+                continue;
+
+            if (newNeighbours.Contains(curNeighbour))
+                continue;
+
+            var nHeader = new zone_header(curNeighbour.ExtractItem(0));
+
+            // If it was active, terminate it
+            if ((nHeader.display_flags & 1) != 0)
+            {
+                GoolZoneObjectsTerminate(curNeighbour);
+
+                // clear bits 1 & 2 (0x3)
+                nHeader.display_flags &= ~3u;
+            }
+        }
+    }
+
+    static public void LevelUpdateMisc(zone_gfx gfx, int flags)
+    {
+        throw new NotImplementedException();
     }
 }
