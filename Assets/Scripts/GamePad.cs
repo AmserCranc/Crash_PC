@@ -89,7 +89,7 @@ static public class InputSystem
 
     static public uint PadRead(int padNumber)
     {
-        uint held, bits;
+        uint held;
 
         held = 0;
         if(padNumber != 0) {return held;} //Skip non-primary pads

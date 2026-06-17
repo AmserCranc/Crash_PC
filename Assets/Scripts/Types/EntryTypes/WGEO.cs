@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Linq;
 using Unity.VisualScripting;
+using UnityEditor;
+using System.IO;
 
 public class WGEO : Entry
 {
@@ -61,10 +63,10 @@ public class WGEO : Entry
         for(int index = 0; index < vertCount; index++)
             verts.Add(new WGEO_vertex(rawVerts, index * WGEO_vertex.DATA_LENGTH));
         
-
-
 //DEBUGGING
         PlaceTerrain();
+
+
     }
 
     
@@ -240,7 +242,14 @@ public class WGEO : Entry
             }
         }
 
-        GameObject go = new GameObject("WGEO");
+        GameObject WGEO_root;
+        if(GameObject.Find("WGEO_root") == null)
+            WGEO_root = new GameObject("WGEO_root");
+
+        GameObject go = new GameObject($"WGEO");
+        GameObject parent = GameObject.Find("WGEO_root");
+        go.transform.parent = parent.transform;
+        go.name = parent.transform.childCount.ToString();
 
         MeshFilter mf = go.AddComponent<MeshFilter>();
         MeshRenderer mr = go.AddComponent<MeshRenderer>();
@@ -347,52 +356,5 @@ public class WGEO : Entry
         return mesh;
     }
 } 
-// #region later
-//     public struct WGEO_ModelTri
-//     {
-//         public const byte NullPtr = 0x57;
 
-//         // || Little Endian
-//         // || YYSSFTLL PPPPPPPP CCCCCCCA XXXXXXXX
-//         const int
-//             pTEX_IDX    = 0x0,
-//             pANIMATED   = 0x8,
-//             pCOLOUR     = 0x9,
-//             pKEY        = 0x10,
-//             pUNKNOWN    = 0x18,
-//             pIDX_TYPE   = 0x1A,
-//             pFLAG       = 0x1B,
-//             pTRI_TYPE   = 0x1C;
-
-//         private uint raw;
-
-//         public byte texture   => (byte) raw;
-//         public bool animated  =>       (raw >> pANIMATED & 0b0000_0001) != 0;
-//         public byte colour    => (byte)(raw >> pCOLOUR   & 0b0001_1111);
-//         public byte key       => (byte)(raw >> pKEY);
-//         public byte unknown   => (byte)(raw >> pUNKNOWN  & 0b0000_0011);
-//         public byte indexType => (byte)(raw >> pIDX_TYPE & 0b0000_0001);
-//         public bool flag      =>       (raw >> pFLAG     & 0b0000_0001) != 0;
-//         public byte triType   => (byte)(raw >> pTRI_TYPE);
-
-
-//         public WGEO_ModelTri(uint _data)
-//         {
-//             raw = _data;
-//         }
-//     }
-
-//     public struct WGEO_ModelTriColour
-//     {
-//         private uint raw;
-
-//         public byte colour1 => (byte)(raw >> 2 & 0b0001_1111);
-//         public byte colour2 => (byte)(raw >> 9 & 0b0001_1111);
-
-//         public WGEO_ModelTriColour(uint _data)
-//         {
-//             raw = _data;
-//         }
-//     }
-// #endregion
 

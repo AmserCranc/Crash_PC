@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using EID = System.UInt32;
 using static gool;
+using System.Runtime.InteropServices;
 
 public class zoneData
 {
@@ -60,7 +61,14 @@ public class zoneData
     }
     public class zone_header
     {
-        public uint         world_count;
+        private byte[]      headerData;
+
+        public const int
+            pWORLD_COUNT    = 0x0,
+            pHEAD_COUNT     = 0x204,
+            pZONE_COUNT     = 0x210; 
+
+        public uint         world_count         => (uint)ConvertBits.FromInt32(headerData, pWORLD_COUNT);
         public List<WGEO>   worlds; //This will need to be populated properly
         public uint         paths_idx;
         public uint         path_count;
@@ -71,9 +79,10 @@ public class zoneData
         public uint         display_flags;
         public zone_gfx     gfx;
 
-        public zone_header(byte[] data)
+        public zone_header(byte[] _headerData)
         {
-            throw new NotImplementedException("zone header data not yet translated");
+            headerData = new byte[_headerData.Length];
+
         }
     }
 
@@ -109,6 +118,15 @@ public class zoneData
         public byte neighbor_zone_idx;
         public byte path_idx;
         public byte goal;
+
+        public zone_neighbor_path(byte[] raw, int offset, int idx)
+        {
+            relation            = raw[offset + (idx * 4) + 0];
+            neighbor_zone_idx   = raw[offset + (idx * 4) + 1];
+            path_idx            = raw[offset + (idx * 4) + 2];
+            goal                = raw[offset + (idx * 4) + 3];
+
+        }
     }
 
     public class zone_path_point
@@ -124,34 +142,54 @@ public class zoneData
 
     public class zone_path
     {
-        public EID slst;
+        private byte[] raw;
 
-        public ZDAT parent_zone;
+        const int 
+            pSLST           = 0x00,
+            pPARENT_Z       = 0x04,
+            pNEIGH_COUNT    = 0x08,
+            pNEIGH_PATHS    = 0x0C,
+            pENTRANCE_IDX   = 0x1C,
+            pEXIT_IDX       = 0x1D,
+            pLENGTH         = 0x1E,
+            pCAM_MODE       = 0x20,
+            pAVG_DISTANCE   = 0x22,
+            pZOOM           = 0x24,
+            pUNK_1          = 0x26,
+            pUNK_2          = 0x28,
+            pUNK_3          = 0x2A,
+            pX_DIR          = 0x2C,
+            pY_DIR          = 0x2E,
+            pZ_DIR          = 0x30;
 
-        public uint neighbor_path_count;
-
+        public EID      slst                => (uint)ConvertBits.FromInt32(raw, pSLST);
+        public EID      parent_zone         => (uint)ConvertBits.FromInt32(raw, pPARENT_Z);
+        public uint     neighbor_path_count => (uint)ConvertBits.FromInt32(raw, pNEIGH_COUNT);
         public zone_neighbor_path[] neighbor_paths = new zone_neighbor_path[4];
-
-        public byte entrance_index;
-        public byte exit_index;
-
-        public ushort length;
-
-        public ushort cam_mode;
-
-        public short avg_node_dist;
-
-        public short cam_zoom;
-
-        public ushort unknown_a;
-        public ushort unknown_b;
-        public ushort unknown_c;
-
-        public short direction_x;
-        public short direction_y;
-        public short direction_z;
+        public byte     entrance_index      => raw[pENTRANCE_IDX];
+        public byte     exit_index          => raw[pEXIT_IDX];
+        public short    length              => ConvertBits.FromInt16(raw, pLENGTH);
+        public short    cam_mode            => ConvertBits.FromInt16(raw, pCAM_MODE);
+        public short    avg_node_dist       => ConvertBits.FromInt16(raw, pAVG_DISTANCE);
+        public short    cam_zoom            => ConvertBits.FromInt16(raw, pZOOM);
+        public short    unknown_a           => ConvertBits.FromInt16(raw, pUNK_1);
+        public short    unknown_b           => ConvertBits.FromInt16(raw, pUNK_2);
+        public short    unknown_c           => ConvertBits.FromInt16(raw, pUNK_3);
+        public short    direction_x         => ConvertBits.FromInt16(raw, pX_DIR);
+        public short    direction_y         => ConvertBits.FromInt16(raw, pY_DIR);
+        public short    direction_z         => ConvertBits.FromInt16(raw, pZ_DIR);
 
         public List<zone_path_point> points = new();
+
+        public zone_path(byte[] rawData)
+        {
+            raw = rawData;
+        }
+
+        public zone_neighbor_path GetNeighbourPath(int idx)
+        {
+            return new zone_neighbor_path(raw, pNEIGH_PATHS, idx);
+        }
     }
 
     public class zone_entity_path_point

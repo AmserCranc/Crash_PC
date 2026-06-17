@@ -2,11 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using LID = System.Int32;
+using EID = System.Int32;
 using static gool;
 using static DemoPlayback;
 using static Level;
 using static Cam;
 using static Title;
+using System;
+using static NS_subsystems;
 
 unsafe public class Bootstrap : MonoBehaviour
 {
@@ -14,7 +17,7 @@ unsafe public class Bootstrap : MonoBehaviour
         FILE_BASE     = "s00000";
 
     public const LID
-        LID_BOOTLEVEL = 15;
+        LID_BOOTLEVEL = LevelID.Map_Main_Menu_Title_Sequence;
 
 
     public GameObject chunkDisplay;
@@ -30,12 +33,36 @@ unsafe public class Bootstrap : MonoBehaviour
     public InputSystem.Pad[] pads;
     private static readonly KeyCode[] AllKeyCodes = (KeyCode[])System.Enum.GetValues(typeof(KeyCode));
 
+/* .data */
+    private static readonly ns_subsystem[] subsys = new ns_subsystem[]
+    {
+        new ns_subsystem { subname = "NONE", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "SVTX", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "TGEO", init = null        , init2 = null              , on_load = TGEOOnLoad  , unused = null, kill = null },
+        new ns_subsystem { subname = "WGEO", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "SLST", init = SLSTInit    , init2 = null              , on_load = null        , unused = null, kill = SLSTKill },
+        new ns_subsystem { subname = "TPAG", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "LDAT", init = null        , init2 = LDATInit          , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "ZDAT", init = null        , init2 = null              , on_load = ZDATOnLoad  , unused = null, kill = null },
+        new ns_subsystem { subname = "CPAT", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "BINF", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "OPAT", init = null        , init2 = InitLID           , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "GOOL", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "ADIO", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "MIDI", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "INST", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "IMAG", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "LINK", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "MDAT", init = TitleInit   , init2 = TitleLoadNextState, on_load = MDATOnLoad  , unused = null, kill = TitleKill },
+        new ns_subsystem { subname = "IPAL", init = null        , init2 = null              , on_load = null        , unused = null, kill = null },
+        new ns_subsystem { subname = "PBAK", init = PbakInit    , init2 = null              , on_load = null        , unused = null, kill = PBAKKill }
+    };
 
     // .sdata
     int wgeom_disabled = 0,
         paused = 0,
-        pause_status = 0,
-        done = 0;
+        pause_status = 0;
+        //done = 0;
     // .sbss
     uint pause_stamp, pause_draw_stamp;
 
@@ -65,11 +92,13 @@ unsafe public class Bootstrap : MonoBehaviour
     void LoadLevel(LID level)
     {
         lid = level;
-        Debug.Log($"Attempting load {FILE_BASE}{level}");
-        levelHeader = new($"{streamLocation}{FILE_BASE}{level}.nsd");
-        levelData   = new($"{streamLocation}{FILE_BASE}{level}.nsf");
-
-
+        Level.current_lid = level;
+        string fileSuffix = level < 16 ? "0" + Convert.ToString(level, 16) : Convert.ToString(level, 16);
+        Debug.Log("Attempting load " + FILE_BASE + fileSuffix);
+        levelHeader = new($"{streamLocation}{FILE_BASE}{fileSuffix}.nsd");
+        levelData   = new($"{streamLocation}{FILE_BASE}{fileSuffix}.nsf");
+    
+        NSInit(level);
     }
 
     void CreateCoreObjects()
@@ -229,5 +258,31 @@ unsafe public class Bootstrap : MonoBehaviour
 
     }
 
+    public void NSInit(EID levelID)
+    {
+        Level.current_lid   = levelID;
+        Level.next_lid      = -1;
+        Level.lid           = levelID;
+        Level.update_pend   = 1;
+        DisplayLoadingScreen();
+        
+        foreach(ns_subsystem s in subsys)
+        {
+            if(s.init is not null)
+                s.init();
+        }
 
+        foreach(ns_subsystem s in subsys)
+        {
+            if(s.init2 is not null)
+                s.init2();
+        }
+
+
+    }
+
+    public void DisplayLoadingScreen()
+    {
+        //throw new NotImplementedException();
+    }
 }

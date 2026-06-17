@@ -1,6 +1,8 @@
 using System;
 using EID = System.UInt32;
 using LID = System.UInt32;
+using PEID = System.UInt32;
+
 using static Level;
 using static GLOBAL;
 using static geom;
@@ -280,26 +282,14 @@ public class gool
     }
     public class state_maps
     {
-        public ushort[] event_map, subtype_map;
+        public ushort[] map;
 
-        public state_maps(byte[] data, header header)
+        public state_maps(byte[] data)
         {
-            int eventCount = (int)(header.subtype_map_idx + 1);
+            map = new ushort[data.Length / 2];
 
-            event_map = new ushort[eventCount];
-
-            for (int i = 0; i < eventCount; i++)
-                event_map[i] = (ushort)ConvertBits.FromInt16(data, i * 2);
-
-            int subtypeCount = (data.Length / 2) - eventCount;
-
-            subtype_map = new ushort[subtypeCount];
-
-            for (int i = 0; i < subtypeCount; i++)
-                subtype_map[i] = (ushort)ConvertBits.FromInt16(
-                    data,
-                    (eventCount + i) * 2
-                );
+            for (int i = 0; i < map.Length; i++)
+                map[i] = (ushort)ConvertBits.FromInt16(data, i * 2);
         }
     }
     public class gool_anim
@@ -457,10 +447,10 @@ public class gool
             obj.vectors.scale.y = 0x1000;
             obj.vectors.scale.z = 0x1000;
         }
-        p_eid = (uint)GLOBAL.nsd.execEIDmap[exec];
+        p_eid = (uint)GLOBAL.nsd.GetEIDfromMap(exec);
         if (exec == 4 || exec == 5 || exec == 29) { obj.zone = null; }
         if (exec == 0)                            { obj.process.cam_zoom = 0; }
-        global = FindEntry(p_eid);
+        global = GLOBAL.nsf.entryTable[(int)p_eid];
         obj.global = global;
         obj.process.links.self          = obj;
         obj.process.links.collider      = null;
@@ -472,9 +462,9 @@ public class gool
         obj.process.once_p   = 0;
         obj.process.links.player = player;
         header = new header(obj.global.ExtractItem(0));
-        maps = new state_maps(obj.global.ExtractItem(3), header);
+        maps = new state_maps(obj.global.ExtractItem(3));
         idx_states = (int)header.subtype_map_idx;
-        state = maps.subtype_map[idx_states + subtype];
+        state = maps.map[idx_states + subtype];
 
         if(state == 0xFF)
             Debug.LogWarning($"On ObjectInit {subtype}, invalid state");
@@ -497,9 +487,23 @@ public class gool
         throw new NotImplementedException();
     }
 
-    static public Entry FindEntry(EID eID)
+    static public void InitLevelSpawns()
     {
-        throw new NotImplementedException();
+        ushort[] levelSpawn =  new ushort[gool.SPAWN_COUNT];
+        levelSpawn = level_spawns;
+
+        for (int i = 0; levelSpawn[i] != 0; i++)
+        {
+            ushort value = levelSpawn[i];
+
+            int packedLevel = value >> 9;
+            int spawnIndex = value & 0x1FF;
+
+            if (packedLevel == GLOBAL.nsd.levelID)
+            {
+                spawns[spawnIndex] |= 8;
+            }
+        }
     }
 }
 

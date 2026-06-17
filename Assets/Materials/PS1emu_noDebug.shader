@@ -246,8 +246,9 @@ Shader "Custom/WGEO_PS1"
                 float4 finalCol = Decode5551(colour, i.meta.w);
                 clip(finalCol.a - 0.5);
                 finalCol.rgb *= i.col.rgb * _VertColourIntensity;
-
-                return fixed4(1, 0, 1, 1);
+                
+                return finalCol;
+                //return fixed4(1, 0, 1, 1);
             }
 
             ENDCG

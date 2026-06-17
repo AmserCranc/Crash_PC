@@ -57,6 +57,8 @@ unsafe public class Entry
         raw = _data;
 
         if(magic != MAGIC) throw new Exception("Entry has incorrect magic");
+
+        GLOBAL.nsf.entryTable.TryAdd((int)id, this);
     }
 
     public Entry Classify()
@@ -92,6 +94,7 @@ unsafe public class Entry
         int rootIDX     = ConvertBits.FromInt32(raw, pITEM_OFFS + ( number       * sizeof(Int32)));
         int finalIDX    = ConvertBits.FromInt32(raw, pITEM_OFFS + ((number + 1)  * sizeof(Int32)));
         int length      = finalIDX - rootIDX;
+        //int byteOffset  = rootIDX + pITEM_OFFS;
 
         byte[] itemData = new byte[length];
         Array.Copy(raw, rootIDX, itemData, 0, length);
@@ -144,5 +147,10 @@ unsafe public class Entry
             eid >>= 6;
         }
         return new string(str);
+    }
+
+    internal static string EIDToEName(int eid)
+    {
+        throw new NotImplementedException();
     }
 }

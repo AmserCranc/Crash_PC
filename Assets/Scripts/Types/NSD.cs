@@ -68,7 +68,7 @@ public class NSD
 
     #endregion
 
-    #region Level Header
+    #region Level Header || LDAT
 
     public int levelHeaderMagic     => ConvertBits.FromInt32(raw, idxAfterHashTable + 0);
     public int levelID              => ConvertBits.FromInt32(raw, idxAfterHashTable + PROPERTY_SIZE);
@@ -189,6 +189,5 @@ public class NSD
             idxOfEIDmap + idx * STRIDE
         );
     }
-
     #endregion
 }

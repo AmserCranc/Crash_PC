@@ -36,6 +36,13 @@ static public class Level
    //public rgb8         next_vram_fill_color;   /* 8005796C */
     static public uint         respawn_stamp;          /* 80057970 */
     static public level_state  savestate;              /* 80057974 */
+
+    static public int current_lid;
+    static public int next_lid;
+    static public int lid;
+    static public int update_pend;
+    static public uint zone_spawn;
+    static public int path_idx_spawn;
 #endregion
 
     static public level_state  levelState;
@@ -52,86 +59,6 @@ static public class Level
         public uint[] spawns;
         public int box_count;
     }
-
-
-    // public void Init()
-    // {
-    //     Entry zone_spawn;
-    //     zone_path path_spawn;
-    //     uint progress_spawn;
-    //     zone_header header;
-    //     int idx, ref_inc;
-
-    //     GLOBAL.pbak_state = 0;
-    //     GLOBAL.crash = null;
-    //     GLOBAL.current_display_flags  = gool.FLAG_DISPLAY_WORLDS | gool.FLAG_DISPANIM_OBJECTS | gool.FLAG_CAM_UPDATE;
-    //     GLOBAL.next_display_flags     = gool.FLAG_DISPLAY_WORLDS | gool.FLAG_DISPANIM_OBJECTS | gool.FLAG_CAM_UPDATE;
-    //     GLOBAL.level.spawns           = new uint[gool.SPAWN_COUNT];
-    //     InitLevelSpawns(GLOBAL.ldat.lid);
-    //     progress_spawn   = 0;
-    //     ref_inc = 2;
-
-    //     if(ldat.lid == LevelID.Hog_Wild 
-    //         && ldat.lid == LevelID.Whole_Hog)
-    //     {
-    //         ref_inc = 1;
-    //     }
-    //     //GfxInitMatrices();
-    //     if(ldat.lid == LevelID.Map_Main_Menu_Title_Sequence 
-    //         && GLOBAL.state == 0x200 
-    //         && ldat_not_inited == 0)
-    //     {
-    //         zone_spawn = GLOBAL.ldat.parent.entries[NSStringToEID(title_zone_name)];
-    //     }
-
-    //     if(bonus_return >= 1)
-    //     {
-    //         ldat.zone_spawn      = savestate.zone;
-    //         ldat.path_idx_spawn  = savestate.path_idx;
-    //         progress_spawn       = savestate.progress;
-    //         bonus_return         = 0;
-    //     }
-
-    //     zone_spawn = GLOBAL.ldat.parent.entries[ldat.zone_spawn]; 
-        
-    //     GLOBAL.crash_eid = EID_NONE;
-    //     cur_zone = null;
-    //     cur_path = null;
-    //     cur_progress = 0;
-    //     //vram_fill_color.r = 0;
-    //     //vram_fill_color.g = 0;
-    //     //vram_fill_color.b = 0;
-    //     respawn_stamp = 0;
-
-    //     if(GLOBAL.state == gool.GAME_STATE_TITLE)
-    //         PbakChoose(GLOBAL.crash_eid);
-        
-    //     header = new zone_header(zone_spawn.ExtractItem(0));
-    //     idx = (int)(header.paths_idx + ldat.path_idx_spawn);
-    //     path_spawn = zone_spawn.ExtractItem(idx);
-
-    //     LevelUpdate(zone_spawn, path_spawn, (int)progress_spawn, 0);
-
-    //     //ShaderParamsUpdate(1);
-    //     //ShaderParamsUpdateRipple(1);
-
-    //     ldat_not_inited = 0;       
-    // }
-
-    // public void InitLevelSpawns(LID lid)
-    // {
-    //     throw new NotImplementedException("init level spawns");
-    // }
-
-    // public EID NSStringToEID(char[] name)
-    // {
-    //     throw new NotImplementedException("NSStringToEID");
-    // }
-
-    // public void PbakChoose(EID pbak)
-    // {
-    //     throw new NotImplementedException("playback chooser");
-    // }
 
     static public void LevelUpdate(Entry zone, zone_path path, int progress, uint flags)
     {

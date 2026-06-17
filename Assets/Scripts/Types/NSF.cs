@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using EID = System.Int32;
+using PEID = System.Int32;
 
 public class NSF
 {
     public List<Chunk> chunks;
+    public Dictionary<EID, Entry> entryTable;
     public NSD nsd;
 
     public NSF(string streamPath)
@@ -17,6 +20,7 @@ public class NSF
         GLOBAL.WGEO_material = new Material(Shader.Find("Custom/WGEO_PS1"));
         GLOBAL.HUD = new Material(Shader.Find("Custom/WGEO_PS1"));
         GLOBAL.DEMO = new Material(Shader.Find("Custom/WGEO_PS1"));
+        GLOBAL.nsf = this;
 
 
         byte[] raw;
@@ -54,6 +58,7 @@ public class NSF
         }
 
         chunks = new();
+        entryTable = new();
 
         foreach (Chunk chunk in mainChunks)
         {
@@ -138,9 +143,16 @@ public class NSF
         GLOBAL.WGEO_material.SetInt("_Page6_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(6));
         GLOBAL.WGEO_material.SetInt("_Page7_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(7));
         GLOBAL.WGEO_material.SetInt("_Page8_EID", GLOBAL.texEIDMap.Keys.ElementAtOrDefault(8));
+
+
+        GLOBAL.DEBUG_atlas = atlas;
+
+        
+
+
 #endregion
 
-
+        Level.cur_zone = FindEntry(GLOBAL.nsd.levelStartZoneEID);
 
 
     }
@@ -251,5 +263,13 @@ public class NSF
 
 
 #endregion
+    
+    public Entry FindEntry(int eid)
+    {
+        foreach(Entry e in GLOBAL.nsf.entryTable.Values)
+            if(e.EIDname == Entry.EIDToEName((uint)eid))
+                return e;
 
+        throw new Exception($"{eid}|{Entry.EIDToEName((uint)eid)} not found in entryTable");
+    }
 }

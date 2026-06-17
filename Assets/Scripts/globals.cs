@@ -122,12 +122,18 @@ static public class GLOBAL
     static public LID          next_lid;
     static public int          bonus_return2;
     static public zone_header  zone_header;
+
+    static public int          state;
+
 #endregion
 
     
 
     static public NSD nsd;
+    static public NSF nsf;
 
+
+    static public Texture2D DEBUG_atlas;
 
     static public void Init()
     {
