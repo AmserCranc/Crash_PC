@@ -23,6 +23,9 @@ public static class GoolCamera
 
         ptIndex = Mathf.Clamp(ptIndex, 0, path.points.Count - 1);
 
+        if(ptIndex == -1)
+            return new Pose();
+
         zoneData.zone_path_point a = path.points[ptIndex];
         zoneData.zone_path_point b;
 

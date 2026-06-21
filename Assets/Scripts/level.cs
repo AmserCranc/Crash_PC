@@ -31,9 +31,9 @@ static public class Level
     static public uint         unk_80057958;           /* 80057958 */
     static public uint         unk_8005795C;           /* 8005795C */
     static public int          draw_count;             /* 80057960 */
-   //public rgb8         prev_vram_fill_color;   /* 80057964 */
-   //public rgb8         vram_fill_color;        /* 80057968 */
-   //public rgb8         next_vram_fill_color;   /* 8005796C */
+    static public Color        prev_vram_fill_color;   /* 80057964 */
+    static public Color        vram_fill_color;        /* 80057968 */
+    static public Color        next_vram_fill_color;   /* 8005796C */
     static public uint         respawn_stamp;          /* 80057970 */
     static public level_state  savestate;              /* 80057974 */
 
@@ -43,6 +43,7 @@ static public class Level
     static public int update_pend;
     static public uint zone_spawn;
     static public int path_idx_spawn;
+    static public int cur_zone_flags_ro;
 #endregion
 
     static public level_state  levelState;
@@ -71,7 +72,8 @@ static public class Level
         }
 
         int pathLength = path.length << 8;
-        progress = Math.Clamp(progress, 0, pathLength -1);
+        try {progress = Math.Clamp(progress, 0, pathLength -1);}
+        catch{ progress = 0;}
         int ptIndex = progress >> 8;
         int currentPtIndex = cur_progress >> 8;
 
@@ -111,6 +113,9 @@ static public class Level
 
                 foreach(var neighbour in header.neighbours)
                 {
+                    if(neighbour == 0)
+                        continue;
+
                     zone_header neighbourHeader = new zone_header(nsf.entryTable[(int)neighbour].ExtractItem(0));
 
                     if((neighbourHeader.display_flags & 1) == 0)
@@ -128,7 +133,7 @@ static public class Level
                         neighbourHeader.display_flags &= ~4u;
                 }
 
-                LevelUpdateMisc(header.gfx, flags);
+               // LevelUpdateMisc(header.gfx, (int)flags);
             }
             else
             {
@@ -249,7 +254,7 @@ static public class Level
         if (pbak_state != 2)
             caption_obj = null;
         title_pause_state = 0;
-        TransSmoothStopAtSolid(0, 0, 0);
+        //TransSmoothStopAtSolid(0, 0, 0);
         fade_step = 32;
         //cur_zone_query.once = 0;
         if (game_state != GAME_STATE_TITLE)
@@ -261,10 +266,7 @@ static public class Level
         throw new NotImplementedException();
     }
 
-    static public void TransSmoothStopAtSolid(int a, int b, int c)
-    {
-        throw new NotImplementedException();
-    }
+
     
     static public void SpawnObjects()
     {
@@ -321,6 +323,11 @@ static public class Level
 
     static public void LevelUpdateMisc(zone_gfx gfx, int flags)
     {
-        throw new NotImplementedException();
+        //respawn_stamp = ticks_elapsed;
+        prev_vram_fill_color = vram_fill_color;
+        next_vram_fill_color = gfx.unknown_h;
+        cur_zone_flags_ro = (int)gfx.flags;
+        // if (!(flags & 4))
+        //     MidiSetStateStopped();
     }
 }

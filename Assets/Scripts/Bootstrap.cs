@@ -78,14 +78,14 @@ unsafe public class Bootstrap : MonoBehaviour
         CreateCoreObjects();                    Debug.Log("Passed CreateCoreObjects");
         Level.InitMisc(1);                      Debug.Log("Passed LevelInitMisc");
 
-#region Chunk Visualiser
-        List<Color> blocks = new();
-        foreach(Chunk chunk in levelData.chunks)
-            blocks.Add(chunk.disp);
+// #region Chunk Visualiser
+//         List<Color> blocks = new();
+//         foreach(Chunk chunk in levelData.chunks)
+//             blocks.Add(chunk.disp);
 
-        this.GetComponent<MeshRenderer>().material.SetInt("_ColourCount", blocks.Count);
-        this.GetComponent<MeshRenderer>().material.SetColorArray("_Colours", blocks);
-#endregion
+//         this.GetComponent<MeshRenderer>().material.SetInt("_ColourCount", blocks.Count);
+//         this.GetComponent<MeshRenderer>().material.SetColorArray("_Colours", blocks);
+// #endregion
     
     }
 

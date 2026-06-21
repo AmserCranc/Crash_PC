@@ -50,7 +50,7 @@ public class zoneData
         public int      water_y;
         public EID      midi;
         public uint     unknown_g;
-        public Vector3  unknown_h;
+        public Color    unknown_h;
         public byte     unused_a;
         public Vector3  vram_fill;
         public byte     unused_b;
@@ -82,6 +82,8 @@ public class zoneData
         public zone_header(byte[] _headerData)
         {
             headerData = new byte[_headerData.Length];
+            neighbours = new EID[4];
+            gfx = new zone_gfx();
 
         }
     }

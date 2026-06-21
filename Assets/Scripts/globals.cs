@@ -126,7 +126,7 @@ static public class GLOBAL
     static public int          state;
 
 #endregion
-
+ 
     
 
     static public NSD nsd;

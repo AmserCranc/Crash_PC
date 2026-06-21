@@ -274,10 +274,6 @@ public class WGEO : Entry
 
         foreach (WGEO_face face in faces)
         {
-            //
-            // VERTICES
-            //
-
             vertices.Add(new Vector3(
                 face.verts.c0.x,
                 face.verts.c0.y,
@@ -293,10 +289,6 @@ public class WGEO : Entry
                 face.verts.c2.y,
                 face.verts.c2.z));
 
-            //
-            // UVs
-            //
-
             uvs.Add(new Vector2(
                 face.UV.c0.x,
                 face.UV.c0.y));
@@ -309,10 +301,6 @@ public class WGEO : Entry
                 face.UV.c2.x,
                 face.UV.c2.y));
 
-            //
-            // META
-            //
-
             uvMeta.Add(face.meta);
             uvMeta.Add(face.meta);
             uvMeta.Add(face.meta);
@@ -320,18 +308,10 @@ public class WGEO : Entry
             uvMeta1.Add(face.meta1);
             uvMeta1.Add(face.meta1);
             uvMeta1.Add(face.meta1);
-
-            //
-            // COLOURS
-            //
 
             colors.Add(face.RGBA_0);
             colors.Add(face.RGBA_1);
             colors.Add(face.RGBA_2);
-
-            //
-            // TRIANGLES
-            //
 
             triangles.Add(index + 0);
             triangles.Add(index + 1);

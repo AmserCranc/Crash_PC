@@ -13,7 +13,22 @@ using System.Collections.Generic;
 
 public class gool
 {
-    public const int EID_NONE = 0x6396347F;
+    public const int 
+        EID_NONE                  = 0x6396347F,
+        SUCCESS                   = -255,
+        ERROR_ALLOC_FAILED        = -254,
+        ERROR_COLLISION_OVERRIDE  = -28,
+        ERROR_INVALID_STATE       = -27,
+        ERROR_INVALID_STATERETURN = -26,
+        ERROR_INVALID_RETURN      = -25,
+        ERROR_NO_NEIGHBORS_FOUND  = -23,
+        ERROR_OBJECT_POOL_FULL    = -22,
+        ERROR_INVALID_MAGIC       = -18,
+        ERROR_READ_FAILED         = -16,
+        ERROR_MALLOC_FAILED       = -15,
+        ERROR                     = -14,
+        ERROR_NO_FREE_PAGES       = -12,
+        ERROR_INVALID_REF         = -10;
 #region gool flags
 /* events */
     public const uint EVENT_JUMPED_ON       = 0;
@@ -186,6 +201,25 @@ public class gool
         [FieldOffset(0)]
         public unsafe fixed ushort a[24];
     }
+    public struct state_ref
+    {
+        public uint state;
+        public int guard;
+    }
+    public struct state
+    {
+        public uint flags;
+        public uint status_c;
+        public ushort extern_idx;
+        public ushort pc_event;
+        public ushort pc_trans;
+        public ushort pc_code;
+
+        public state(byte[] raw)
+        {
+            throw new NotImplementedException("gool state needs descs decoded");
+        }
+    }
     public class gool_object : MonoBehaviour
     {
         public handle       handle;
@@ -193,18 +227,18 @@ public class gool
         public Entry        global;
         public Entry        external;
         public Entry        zone;
-        public uint         state;
+        public state        state;
         public colours      colours;
         public gool_process process;
         public vectors      vectors;
-
-        public gool_object()
+        
+        public void Init()
         {
             handle = new handle();
             bounds = new bound();
             process = new gool_process();
             vectors = new vectors();
-
+            colours = new colours();
         }
 
     }
@@ -296,6 +330,15 @@ public class gool
     {
 //NOT IMPLEMENTED
     }
+    public class gool_event_query
+    {
+        public gool_object sender;
+        public uint evnt;
+        public int argc;
+        public int type;
+        public int count;
+        public uint[] argv;
+    }
 #endregion
 #region variables
     static public readonly move_state[] moveStates = new move_state[16]
@@ -356,7 +399,9 @@ public class gool
     static public GameObject ObjectCreate(gool_object parent, int exec, int subtype, int argc, uint argv, int flag)
     {
         GameObject newObject = new();
-        gool_object child = newObject.AddComponent<gool_object>();;
+        gool_object child = newObject.AddComponent<gool_object>();
+        child.process = new();
+        child.Init();
         Entry zone;
         zone_header header;
 
@@ -367,7 +412,8 @@ public class gool
         }
         else
         {
-            child = new gool_object();
+            child = newObject.AddComponent<gool_object>();
+            child.process = new();
         }
 
         ObjectAddChild(parent, child);
@@ -382,10 +428,18 @@ public class gool
 
         return newObject;
     }
-    static public void ObjectAddChild(gool_object parent, gool_object child)
+    public static void ObjectAddChild(gool_object parent, gool_object child)
     {
         if (parent == null || child == null)
             return;
+
+        if (parent.process == null ||
+            parent.process.links == null ||
+            child.process == null ||
+            child.process.links == null)
+        {
+            return;
+        }
 
         child.process.links.parent = parent;
         child.process.links.sibling = parent.process.links.children;
@@ -407,7 +461,7 @@ public class gool
         obj.process.entity = null;
         obj.process.path_progress = 0;
         obj.process.path_length = 0;
-        obj.handle.type = 1;
+        obj.handle = new handle {type = 1};
         obj.process.vectors[0].x = 0;
         obj.process.vectors[0].y = 0;
         obj.process.vectors[0].z = 0;
@@ -440,12 +494,11 @@ public class gool
         {
             vectors = obj.vectors;
             obj.zone = null;
-            obj.vectors.rot.y = 0;
-            obj.vectors.rot.x = 0;
-            obj.vectors.rot.z = 0;
-            obj.vectors.scale.x = 0x1000;
-            obj.vectors.scale.y = 0x1000;
-            obj.vectors.scale.z = 0x1000;
+            obj.vectors = new vectors
+            {
+                rot = new Vector3(0, 0, 0),
+                scale = new Vector3(0x1000, 0x1000, 0x1000)
+            };
         }
         p_eid = (uint)GLOBAL.nsd.GetEIDfromMap(exec);
         if (exec == 4 || exec == 5 || exec == 29) { obj.zone = null; }
@@ -477,16 +530,231 @@ public class gool
         throw new NotImplementedException();
     }
 
-    static public void SendToColliders(gool_object sender, uint evnt, int type, int argc, uint argv)
+    static public void GoolSendToColliders(
+        gool_object sender,
+        uint ev,
+        int type,
+        int argc,
+        uint[] argv)
     {
-        throw new NotImplementedException();
+        var query = new gool_event_query
+        {
+            sender = sender,
+            evnt = ev,
+            type = type,
+            argc = argc,
+            argv = argv,
+            count = 0
+        };
+
+        for (int i = 0; i < 8; i++)
+        {
+            GoolObjectHandleTraverseTreePostorder(
+                GLOBAL.objectCollections[i].GetComponent<gool_object>(),
+                GoolSendIfColliding,
+                query);
+        }
     }
 
+    static public int ObjectHandleTraverseTreePostorder(gool_object obj, GoolTraversalFunc func, object context)
+    {
+
+    }
+
+    static public int SendIfColliding(gool_object recipient, gool_event_query query)
+    {
+        gool_object sender  = query.sender;
+        uint eventId        = query.evnt;
+        int argc            = query.argc;
+        uint[] argv         = query.argv;
+
+        bound senderBound;
+        bound recipientBound;
+
+        if (query.type == 0)
+        {
+            query.count++;
+            GoolSendEvent(sender, recipient, eventId, argc, argv);
+            return SUCCESS;
+        }
+
+        switch (query.type)
+        {
+            case 4:
+            {
+                header header = new header(recipient.global.ExtractItem(0));
+                if (header?.category != 0x300 && header?.category != 0x400)
+                    return SUCCESS;
+                goto case 1;
+            }
+
+            case 1:
+            {
+                GoolObjectCalcBound(sender, out senderBound);
+                GoolObjectCalcBound(recipient, out recipientBound);
+
+                if (TestBoundIntersection(ref recipientBound, ref senderBound))
+                {
+                    query.Count++;
+                    GoolSendEvent(sender, recipient, eventId, argc, argv);
+                }
+                break;
+            }
+
+            case 3:
+            {
+                header header = new header(recipient.global.ExtractItem(0));
+                if (!(header?.category == 0x300 || header?.category == 0x400))
+                    return SUCCESS;
+                goto case 2;
+            }
+
+            case 2:
+            {
+                GoolObjectCalcBound(sender, out senderBound);
+
+                if (TestPointInBound(recipient.Trans, ref senderBound))
+                {
+                    query.Count++;
+                    GoolSendEvent(sender, recipient, eventId, argc, argv);
+                }
+                break;
+            }
+
+            case 5:
+            {
+                header header = new header(recipient.global.ExtractItem(0));
+                if (!(header?.category == 0x300 || header?.category == 0x400))
+                    return SUCCESS;
+
+                GoolObjectCalcBound(recipient, out recipientBound);
+
+                senderBound = new bound
+                {
+                    p1 = new Vector3(
+                        sender.vectors.trans.y - sender.vectors.misc_b.y,
+                        sender.vectors.trans.x - sender.vectors.misc_b.x,
+                        sender.vectors.trans.z - sender.vectors.misc_b.z
+                    ),
+                    p2 = new Vector3(
+                        sender.vectors.trans.y + sender.vectors.misc_b.y,
+                        sender.vectors.trans.x + sender.vectors.misc_b.x,
+                        sender.vectors.trans.z + sender.vectors.misc_b.z
+                    )
+                };
+
+                if (TestBoundIntersection(ref recipientBound, ref senderBound))
+                {
+                    if (query.count < 3 || query.Count % 5 == 0)
+                        GoolSendEvent(sender, recipient, eventId, argc, argv);
+
+                    query.count++;
+                }
+                break;
+            }
+
+            default:
+                query.count++;
+                GoolSendEvent(sender, recipient, eventId, argc, argv);
+                break;
+        }
+
+        return SUCCESS;
+    }
+    static public int SendEvent(gool_object sender, gool_object recipient, uint evnt, int argc, uint[] argv)
+    {
+        Entry exec;
+        header header;
+        state_maps maps;
+        gool_state descs, desc;
+        state_ref transition;
+        uint state, state_idx, subtype_map_idx;
+        uint offs, status_c;
+        byte[] code;
+        uint flags;
+        int res, test, i;
+
+        if (sender) sender.process.misc_flag = (recipient != null) ? 1u : 0u;
+        if (!recipient) { return SUCCESS; }
+
+        recipient.process.links.interrupter = sender;
+        res = ERROR_INVALID_STATERETURN; /* set default (for when no ESR) */
+
+        if (recipient.process.ep != 0)  /* recipient has event service routine? */
+        {
+            ObjectPush(recipient, evnt);
+            ObjectPush(recipient, argv[0]); //GoolObjectPush(recipient, (uint32_t)argv)
+            ObjectPushFrame(recipient, 2, 0xFFFF);
+            recipient.process.pc = recipient.process.ep;
+            res = ObjectInterpret(recipient, FLAG_EVENT_SERVICE, transition); /* call it */
+            if (res != ERROR_INVALID_STATERETURN) 
+            {
+                if (ISERRORCODE(res)) return res; /* return on error */
+                state = transition.state; /* get response */
+            }
+            if (sender) sender.process.misc_flag = transition.guard;
+        }
+
+        if (!ISSUCCESSCODE(res))  /* no ESR or invalid state return from ESR? */
+        {
+            exec = recipient.global;
+            header = new header(exec.ExtractItem(0));
+            subtype_map_idx = header.subtype_map_idx;
+            state_idx = evnt >> 8;
+            if (state_idx < subtype_map_idx) /* index falls within event->state/interrupt map? */
+            { 
+                maps = new state_maps(exec.ExtractItem(3));
+                state = maps.map[state_idx];
+            }
+            else { state = 0xFF; } /* null state */
+
+            if (sender) sender.process.misc_flag = (state != 0xFF) ? 1u : 0;
+
+            if ((state & 0x8000) != 0)  /* is state actually an interrupt? */
+            {
+                recipient.process.gool_event = evnt;
+
+                for (i=0;i<argc;i++)
+                    GoolObjectPush(recipient, argv[i]);
+
+                GoolObjectPushFrame(recipient, argc, 0xFFFF);
+                offs = state & 0x7FFF; /* offset of interrupt (in instructions) */
+                code = exec.ExtractItem(1);
+                recipient.process.pc = code[offs];
+                flags = FLAG_SUSPEND_ON_RET | FLAG_SUSPEND_ON_RETLNK;
+                res = GoolObjectInterpret(recipient, flags, 0); /* execute interrupt */
+                return res; /* return */
+            }
+            
+        }
+        if (state != 0xFF)  /* state is non-null? */
+        {
+            status_c = recipient.process.status_c;
+            if (evnt == 0x1800 || evnt == EVENT_SQUASH || evnt == EVENT_BOULDER_SQUASH)
+                status_c &= ~2u;
+            exec = recipient.global;
+            descs = new state(exec.ExtractItem(4));
+            desc = &descs[state];
+            if ((recipient == crash) &&
+                (recipient.process.invincibility_state >= 2 && recipient.process.invincibility_state <= 4))
+            status_c |= 0x1002;
+            if (!(status_c & desc.flags)) 
+            {
+                recipient.process.gool_event = evnt;
+                if (evnt == 0x1800 || evnt == GOOL_EVENT_SQUASH)
+                    recipient.process.status_a |= 0x10000;
+                GoolObjectChangeState(recipient, state, argc, argv);
+            }
+            else if (sender)
+            sender.process.misc_flag = 0;
+        }
+        return SUCCESS;
+    }
+    
     static public void UpdateObjects(int flags)
     {
         throw new NotImplementedException();
     }
-
     static public void InitLevelSpawns()
     {
         ushort[] levelSpawn =  new ushort[gool.SPAWN_COUNT];
@@ -505,7 +773,14 @@ public class gool
             }
         }
     }
+    static public void GoolZoneObjectsTerminate(Entry zone)
+    {
+        Debug.LogWarning("Skipping GoolZoneObjectsTerminate");
+    }
 
-    
+    public inline int IsErrorCode(int v)
+    {
+        return (v < 0 && v > SUCCESS);
+    }
 }
 
